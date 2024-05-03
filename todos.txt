@@ -1,0 +1,35 @@
+List of things:
+
+Call heartbeat after epoch of f+u+1
+Create RECOVER and WISH messages 
+    Recover: type + nonce to all leaders within an epoch 
+    Wish: type + previous_epoch to all leaders within an epoch
+
+Create TC message that leaders can send after a Wish treshold
+    TC: type + Recovers + view of start of epoch
+
+Create vote for TC message
+    sign TC message (used for forking prevention) after checks to all leaders
+
+After threshold of TC votes:
+    send QC to all (including self)
+
+After QC:
+    adopt view of epoch if not replaced by new TEE
+
+TODOs Handler:
+copy functions that do not change for RBF compared to Comb
+add functions for Heartbeat protocol to send/receive messages
+    - handle message collection at replica, supply list of messages to TEE
+        -check Comb variant for message collection
+
+add callTEE functions for newly defined TEE methods
+    - think about required parameters
+
+think of some way to allow faulty and unresponsive TEEs to occasionally trigger restarts 
+
+Damysus uses logs to store messages up to quorum size (this->log in Handler.cpp)
+    - handle logs for RBF messages
+    - TODO: add storage functionality and other methods related to Comb for RBF
+
+TODO: before adding new functionality, tag commit where RBF is the same as Comb, but has duplicate functionality

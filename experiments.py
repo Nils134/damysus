@@ -71,6 +71,8 @@ runFree      = False #True
 runOnep      = False #True
 runChBase    = False #True
 runChComb    = False #True
+runRBF       = False #True
+
 # Debug versions
 runQuickDbg  = False #True
 runChCombDbg = False #True
@@ -144,6 +146,7 @@ freeHS   = "Light-Damysus"
 onepHS   = "OneP-Damysus"
 baseChHS = "Chained HotStuff"
 combChHS = "Chained-Damysus"
+RoBFHS   = "Rollback Faulty"
 
 # Markers
 baseMRK   = "P"
@@ -154,6 +157,7 @@ freeMRK   = "s"
 onepMRK   = "+"
 baseChMRK = "d"
 combChMRK = ">"
+RoBFMRK    = "^"
 
 # Line styles
 baseLS   = ":"
@@ -164,6 +168,7 @@ freeLS   = "-"
 onepLS   = "-"
 baseChLS = ":"
 combChLS = "-"
+RoBFLS    = "-"
 
 # Markers
 baseCOL   = "black"
@@ -174,6 +179,7 @@ freeCOL   = "purple"
 onepCOL   = "brown"
 baseChCOL = "darkorange"
 combChCOL = "magenta"
+RoBFCOL    = "cyan"
 
 
 ## AWS parameters
@@ -333,6 +339,8 @@ class Protocol(Enum):
     ONEP      = "BASIC_ONEP"               # 1+1/2 phase Damysus
     CHBASE    = "CHAINED_BASELINE"         # chained baseline
     CHCOMB    = "CHAINED_CHEAP_AND_QUICK"  # chained Damysus
+    RBF       = "ROLLBACK_FAULTY_PROTECTED"# only faulty replicas are assumed to attempt rollbacks
+
     ## Debug versions
     QUICKDBG  = "BASIC_QUICK_DEBUG"
     CHCOMBDBG = "CHAINED_CHEAP_AND_QUICK_DEBUG" # chained Damysus - debug version
@@ -821,6 +829,9 @@ def runAWS():
             if runChCombDbg:
                 executeAWS(instanceRepIds=instanceRepIds,instanceClIds=instanceClIds,protocol=Protocol.CHCOMBDBG,constFactor=2,numClTrans=numClTrans,sleepTime=sleepTime,numViews=numViews,cutOffBound=cutOffBound,numFaults=numFaults)
             # ------
+            if runRBF:
+                print("linked to --p9 correctly")
+            # ------
             # We now terminate all instances just in case
             #terminateAllInstances()
 
@@ -1117,7 +1128,7 @@ def executeClusterInstances(instanceRepIds,instanceClIds,protocol,constFactor,nu
         s2.communicate()
         #
         subprocess.run(["scp","-i",node["key"],"-o",sshOpt1,sshAdr+":"+node["dir"]+"/stats/*","stats/"])
-        #
+        #TODO: cannot find this directory?
         rcmd = "rm /app/" + statsdir + "/*"
         docker_rm_cmd = docker + " exec -t " + dockerI + " bash -c \"" + rcmd + "\""
         rm_cmd = "cd " + node["dir"] + "; rm -Rf " + statsdir + "; " + docker_rm_cmd
@@ -1247,6 +1258,9 @@ def runCluster():
         # Chained Cheap&Quick - debug version
         if runChCombDbg:
             executeCluster(info=info,protocol=Protocol.CHCOMBDBG,constFactor=2,numClTrans=numClTrans,sleepTime=sleepTime,numViews=numViews,cutOffBound=cutOffBound,numFaults=numFaults)
+        if runRBF:
+            print("correctly initiated cluster execution")
+            #TODO: create proper executeCluster command
 
     # cleanup
     for node in nodes:
@@ -1926,6 +1940,7 @@ def createPlot(pFile):
     dictTVOnep   = {}
     dictTVChBase = {}
     dictTVChComb = {}
+    dictTVRBF    = {}
     # latency-view
     dictLVBase   = {}
     dictLVCheap  = {}
@@ -1935,6 +1950,8 @@ def createPlot(pFile):
     dictLVOnep   = {}
     dictLVChBase = {}
     dictLVChComb = {}
+    dictLVRBF    = {}
+    
     # handle
     dictHBase   = {}
     dictHCheap  = {}
@@ -1944,6 +1961,7 @@ def createPlot(pFile):
     dictHOnep   = {}
     dictHChBase = {}
     dictHChComb = {}
+    dictHRBF    = {}
     # crypto-sign
     dictCSBase   = {}
     dictCSCheap  = {}
@@ -1953,6 +1971,7 @@ def createPlot(pFile):
     dictCSOnep   = {}
     dictCSChBase = {}
     dictCSChComb = {}
+    dictCSRBF    = {}
     # crypto-verif
     dictCVBase   = {}
     dictCVCheap  = {}
@@ -1962,6 +1981,7 @@ def createPlot(pFile):
     dictCVOnep   = {}
     dictCVChBase = {}
     dictCVChComb = {}
+    dictCVRBF    = {}
 
     global dockerCpu, dockerMem, networkLat, payloadSize, repeats, repeatsL2, numViews
 
@@ -2036,6 +2056,10 @@ def createPlot(pFile):
                     (val,num) = dictTVChComb.get(numFaults,([],0))
                     val.append(float(pointVal))
                     dictTVChComb.update({numFaults:(val,num+1)})
+                if pointTag == "throughput-view" and protVal == "ROLLBACK_FAULTY_PROTECTED":
+                    (val,num) = dictTVRBF.get(numFaults, ([],0))
+                    val.append(float(pointVal))
+                    dictTVRBF.update({numFaults:(val,num+1)})
                 # Latencies-view
                 if pointTag == "latency-view" and protVal == "BASIC_BASELINE":
                     (val,num) = dictLVBase.get(numFaults,([],0))
@@ -2077,6 +2101,10 @@ def createPlot(pFile):
                     (val,num) = dictLVChComb.get(numFaults,([],0))
                     val.append(float(pointVal))
                     dictLVChComb.update({numFaults:(val,num+1)})
+                if pointTag == "latency-view" and protVal == "ROLLBACK_FAULTY_PROTECTED":
+                    (val,num) = dictLVRBF.get(numFaults, ([],0))
+                    val.append(float(pointVal))
+                    dictLVRBF.update({numFaults:(val,num+1)})
                 # handle
                 if (pointTag == "handle" or pointTag == "latency-handle") and protVal == "BASIC_BASELINE":
                     (val,num) = dictHBase.get(numFaults,([],0))
@@ -2118,6 +2146,10 @@ def createPlot(pFile):
                     (val,num) = dictHChComb.get(numFaults,([],0))
                     val.append(float(pointVal) / numViews)
                     dictHChComb.update({numFaults:(val,num+1)})
+                if pointTag == "handle" and protVal == "ROLLBACK_FAULTY_PROTECTED":
+                    (val,num) = dictHRBF.get(numFaults, ([],0))
+                    val.append(float(pointVal))
+                    dictHRBF.update({numFaults:(val,num+1)})   
                 # crypto-sign
                 if pointTag == "crypto-sign" and protVal == "BASIC_BASELINE":
                     (val,num) = dictCSBase.get(numFaults,([],0))
@@ -2159,6 +2191,10 @@ def createPlot(pFile):
                     (val,num) = dictCSChComb.get(numFaults,([],0))
                     val.append(float(pointVal) / numViews)
                     dictCSChComb.update({numFaults:(val,num+1)})
+                if pointTag == "crypto-sign" and protVal == "ROLLBACK_FAULTY_PROTECTED":
+                    (val,num) = dictCSRBF.get(numFaults, ([],0))
+                    val.append(float(pointVal))
+                    dictCSRBF.update({numFaults:(val,num+1)})   
                 # crypto-verif
                 if pointTag == "crypto-verif" and protVal == "BASIC_BASELINE":
                     (val,num) = dictCVBase.get(numFaults,([],0))
@@ -2200,6 +2236,10 @@ def createPlot(pFile):
                     (val,num) = dictCVChComb.get(numFaults,([],0))
                     val.append(float(pointVal) / numViews)
                     dictCVChComb.update({numFaults:(val,num+1)})
+                if pointTag == "crypto-verif" and protVal == "ROLLBACK_FAULTY_PROTECTED":
+                    (val,num) = dictCVRBF.get(numFaults, ([],0))
+                    val.append(float(pointVal))
+                    dictCVRBF.update({numFaults:(val,num+1)}) 
     f.close()
 
     quantileSize = 20
@@ -2216,6 +2256,8 @@ def createPlot(pFile):
     (faultsTVOnep,   valsTVOnep,   numsTVOnep)   = dict2lists(dictTVOnep,quantileSize,False)
     (faultsTVChBase, valsTVChBase, numsTVChBase) = dict2lists(dictTVChBase,quantileSize,False)
     (faultsTVChComb, valsTVChComb, numsTVChComb) = dict2lists(dictTVChComb,quantileSize,False)
+    (faultsTVRBF, valsTVRBF, numsTVRBF)          = dict2lists(dictTVRBF,quantileSize,False)
+
     # latency-view
     (faultsLVBase,   valsLVBase,   numsLVBase)   = dict2lists(dictLVBase,quantileSize,False)
     (faultsLVCheap,  valsLVCheap,  numsLVCheap)  = dict2lists(dictLVCheap,quantileSize,False)
@@ -2225,6 +2267,8 @@ def createPlot(pFile):
     (faultsLVOnep,   valsLVOnep,   numsLVOnep)   = dict2lists(dictLVOnep,quantileSize,False)
     (faultsLVChBase, valsLVChBase, numsLVChBase) = dict2lists(dictLVChBase,quantileSize,False)
     (faultsLVChComb, valsLVChComb, numsLVChComb) = dict2lists(dictLVChComb,quantileSize,False)
+    (faultsLVRBF,    valsLVRBF,    numsLVRBF)    = dict2lists(dictLVRBF,quantileSize,False)
+
     # handle
     (faultsHBase,   valsHBase,   numsHBase)   = dict2lists(dictHBase,quantileSize1,False)
     (faultsHCheap,  valsHCheap,  numsHCheap)  = dict2lists(dictHCheap,quantileSize1,False)
@@ -2234,6 +2278,8 @@ def createPlot(pFile):
     (faultsHOnep,   valsHOnep,   numsHOnep)   = dict2lists(dictHOnep,quantileSize1,False)
     (faultsHChBase, valsHChBase, numsHChBase) = dict2lists(dictHChBase,quantileSize1,False)
     (faultsHChComb, valsHChComb, numsHChComb) = dict2lists(dictHChComb,quantileSize1,False)
+    (faultsHRBF,    valsHRBF,    numsHRBF)    = dict2lists(dictHRBF,quantileSize1,False)
+
     # crypto-sign
     (faultsCSBase,   valsCSBase,   numsCSBase)   = dict2lists(dictCSBase,quantileSize2,False)
     (faultsCSCheap,  valsCSCheap,  numsCSCheap)  = dict2lists(dictCSCheap,quantileSize2,False)
@@ -2243,6 +2289,8 @@ def createPlot(pFile):
     (faultsCSOnep,   valsCSOnep,   numsCSOnep)   = dict2lists(dictCSOnep,quantileSize2,False)
     (faultsCSChBase, valsCSChBase, numsCSChBase) = dict2lists(dictCSChBase,quantileSize2,False)
     (faultsCSChComb, valsCSChComb, numsCSChComb) = dict2lists(dictCSChComb,quantileSize2,False)
+    (faultsCSRBF,    valsCSRBF,    numsCSRBF)    = dict2lists(dictCSRBF,quantileSize2,False)
+
     # crypto-verif
     (faultsCVBase,   valsCVBase,   numsCVBase)   = dict2lists(dictCVBase,quantileSize2,False)
     (faultsCVCheap,  valsCVCheap,  numsCVCheap)  = dict2lists(dictCVCheap,quantileSize2,False)
@@ -2252,6 +2300,7 @@ def createPlot(pFile):
     (faultsCVOnep,   valsCVOnep,   numsCVOnep)   = dict2lists(dictCVOnep,quantileSize2,False)
     (faultsCVChBase, valsCVChBase, numsCVChBase) = dict2lists(dictCVChBase,quantileSize2,False)
     (faultsCVChComb, valsCVChComb, numsCVChComb) = dict2lists(dictCVChComb,quantileSize2,False)
+    (faultsCVRBF,    valsCVRBF,    numsCVRBF)    = dict2lists(dictCVRBF,quantileSize2,False)
 
     print("faults/throughputs(val+num)/latencies(val+num)/cypto-verif(val+num)/cypto-sign(val+num) for (baseline/cheap/quick/combined/free/onep/chained-baseline/chained-combined)")
     print((faultsTVBase,   (valsTVBase,   numsTVBase),   (valsLVBase,   numsLVBase),   (valsCVBase,   numsCVBase),   (valsCSBase,   numsCSBase)))
@@ -2262,6 +2311,7 @@ def createPlot(pFile):
     print((faultsTVOnep,   (valsTVOnep,   numsTVOnep),   (valsLVOnep,   numsLVOnep),   (valsCVOnep,   numsCVOnep),   (valsCSOnep,   numsCSOnep)))
     print((faultsTVChBase, (valsTVChBase, numsTVChBase), (valsLVChBase, numsLVChBase), (valsCVChBase, numsCVChBase), (valsCSChBase, numsCSChBase)))
     print((faultsTVChComb, (valsTVChComb, numsTVChComb), (valsLVChComb, numsLVChComb), (valsCVChComb, numsCVChComb), (valsCSChComb, numsCSChComb)))
+    print((faultsTVRBF, (valsTVRBF,   numsTVRBF),   (valsLVRBF,   numsLVRBF),   (valsCVRBF,   numsCVRBF),   (valsCSRBF,   numsCSRBF)))
 
     print("Throughput gain (basic versions):")
     # non-chained
@@ -2272,6 +2322,7 @@ def createPlot(pFile):
     getPercentage(False,combHS,faultsTVComb,valsTVComb,freeHS, faultsTVFree, valsTVFree)
     getPercentage(False,baseHS,faultsTVBase,valsTVBase,onepHS, faultsTVOnep, valsTVOnep)
     getPercentage(False,combHS,faultsTVComb,valsTVComb,onepHS, faultsTVOnep, valsTVOnep)
+    #getPercentage(RBF)
     # chained
     getPercentage(False,baseChHS,faultsTVChBase,valsTVChBase,combChHS,faultsTVChComb,valsTVChComb)
 
@@ -2284,6 +2335,7 @@ def createPlot(pFile):
     getPercentage(True,combHS,faultsLVComb,valsLVComb,freeHS, faultsLVFree, valsLVFree)
     getPercentage(True,baseHS,faultsLVBase,valsLVBase,onepHS, faultsLVOnep, valsLVOnep)
     getPercentage(True,combHS,faultsLVComb,valsLVComb,onepHS, faultsLVOnep, valsLVOnep)
+    #getPercentage(RBF)
     # chained
     getPercentage(True,baseChHS,faultsLVChBase,valsLVChBase,combChHS,faultsLVChComb,valsLVChComb)
 
@@ -2296,6 +2348,7 @@ def createPlot(pFile):
     getPercentage(True,combHS,faultsHComb,valsHComb,freeHS, faultsHFree, valsHFree)
     getPercentage(True,baseHS,faultsHBase,valsHBase,onepHS, faultsHOnep, valsHOnep)
     getPercentage(True,combHS,faultsHComb,valsHComb,onepHS, faultsHOnep, valsHOnep)
+    #getPercentage(RBF)
     # chained
     getPercentage(True,baseChHS,faultsHChBase,valsHChBase,combChHS,faultsHChComb,valsHChComb)
 
@@ -2385,6 +2438,8 @@ def createPlot(pFile):
                     axs[0].plot(faultsTVFree,   valsTVFree,   color=freeCOL,   linewidth=LW, marker=freeMRK,   markersize=MS, linestyle=freeLS,   label=freeHS)
                 if len(faultsTVOnep) > 0:
                     axs[0].plot(faultsTVOnep,   valsTVOnep,   color=onepCOL,   linewidth=LW, marker=onepMRK,   markersize=MS, linestyle=onepLS,   label=onepHS)
+                if len(faultsTVRBF) > 0:
+                    axs[0].plot(faultsTVRBF,    valsTVRBF,    color=RoBFCOL,   linewidth=LW, marker=RoBFMRK,   markersize=MS, linestyle=RoBFLS,   label=RoBFHS)
             if plotChained:
                 if len(faultsTVChBase) > 0:
                     axs[0].plot(faultsTVChBase, valsTVChBase, color=baseChCOL, linewidth=LW, marker=baseChMRK, markersize=MS, linestyle=baseChLS, label=baseChHS)
@@ -2403,6 +2458,8 @@ def createPlot(pFile):
                     for x,y,z in zip(faultsTVFree, valsTVFree, numsTVFree):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsTVOnep, valsTVOnep, numsTVOnep):
+                        axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
+                    for x,y,z in zip(faultsTVRBF, valsTVRBF, numsTVRBF):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                 if plotChained:
                     for x,y,z in zip(faultsTVChBase, valsTVChBase, numsTVChBase):
@@ -2453,6 +2510,8 @@ def createPlot(pFile):
                     ax.plot(faultsLVFree,   valsLVFree,   color=freeCOL,   linewidth=LW, marker=freeMRK,   markersize=MS, linestyle=freeLS,   label=freeHS)
                 if len(faultsLVOnep) > 0:
                     ax.plot(faultsLVOnep,   valsLVOnep,   color=onepCOL,   linewidth=LW, marker=onepMRK,   markersize=MS, linestyle=onepLS,   label=onepHS)
+                if len(faultsLVRBF) > 0:
+                    ax.plot(faultsLVRBF,    valsLVRBF,    color=RoBFCOL,   linewidth=LW, marker=RoBFMRK,   markersize=MS, linestyle=RoBFLS,   label=RoBFHS)
             if plotChained:
                 if len(faultsLVChBase) > 0:
                     ax.plot(faultsLVChBase, valsLVChBase, color=baseChCOL, linewidth=LW, marker=baseChMRK, markersize=MS, linestyle=baseChLS, label=baseChHS)
@@ -2471,6 +2530,8 @@ def createPlot(pFile):
                     for x,y,z in zip(faultsLVFree, valsLVFree, numsLVFree):
                         ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsLVOnep, valsLVOnep, numsLVOnep):
+                        ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
+                    for x,y,z in zip(faultsLVRBF, valsLVRBF, numsLVRBF):
                         ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                 if plotChained:
                     for x,y,z in zip(faultsLVChBase, valsLVChBase, numsLVChBase):
@@ -2491,6 +2552,8 @@ def createPlot(pFile):
                     ax.plot(faultsHFree,   valsHFree,   color=freeCOL,   linewidth=LW, marker="+", markersize=MS, linestyle=freeLS,   label=freeHS+"")
                 if len(faultsHOnep) > 0:
                     ax.plot(faultsHOnep,   valsHOnep,   color=onepCOL,   linewidth=LW, marker="+", markersize=MS, linestyle=onepLS,   label=onepHS+"")
+                if len(faultsHRBF) > 0:
+                    ax.plot(faultsHRBF,    valsHRBF,    color=RoBFCOL,   linewidth=LW, marker="+", markersize=MS, linestyle=RoBFLS,   label=RoBFHS+"")
             if plotChained:
                 if len(faultsHChBase) > 0:
                     ax.plot(faultsHChBase, valsHChBase, color=baseChCOL, linewidth=LW, marker="+", markersize=MS, linestyle=baseChLS, label=baseChHS+"")
@@ -2510,6 +2573,8 @@ def createPlot(pFile):
                         ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsHOnep, valsHOnep, numsHOnep):
                         ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
+                    for x,y,z in zip(faultsHRBF, valsHRBF, numsHRBF):
+                        ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')    
                 if plotChained:
                     for x,y,z in zip(faultsHChBase, valsHChBase, numsHChBase):
                         ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
@@ -2529,6 +2594,8 @@ def createPlot(pFile):
                     axs[0].plot(faultsCSFree,   valsCSFree,   color=freeCOL,   linewidth=LW, marker="1", markersize=MS, linestyle=freeLS,   label=freeHS+" (crypto-sign)")
                 if len(faultsCSOnep) > 0:
                     axs[0].plot(faultsCSOnep,   valsCSOnep,   color=onepCOL,   linewidth=LW, marker="1", markersize=MS, linestyle=onepLS,   label=onepHS+" (crypto-sign)")
+                if len(faultsCSOnep) > 0:
+                    axs[0].plot(faultsCSRBF,   valsCSRBF,   color=RoBFCOL,   linewidth=LW, marker="1", markersize=MS, linestyle=RoBFLS,   label=RoBFHS+" (crypto-sign)")
             if plotChained:
                 if len(faultsCSChBase) > 0:
                     axs[0].plot(faultsCSChBase, valsCSChBase, color=baseChCOL, linewidth=LW, marker="1", markersize=MS, linestyle=baseChLS, label=baseChHS+" (crypto-sign)")
@@ -2542,11 +2609,13 @@ def createPlot(pFile):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsCSQuick, valsCSQuick, numsCSQuick):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
-                    for x,y,z in zip(faultsCCSomb, valsCSComb, numsCSComb):
+                    for x,y,z in zip(faultsCSComb, valsCSComb, numsCSComb):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsCSFree, valsCSFree, numsCSFree):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsCSOnep, valsCSOnep, numsCSOnep):
+                        axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
+                    for x,y,z in zip(faultsCSRBF, valsCSRBF, numsCSRBF):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                 if plotChained:
                     for x,y,z in zip(faultsCSChBase, valsCSChBase, numsCSChBase):
@@ -2567,6 +2636,8 @@ def createPlot(pFile):
                     axs[0].plot(faultsCVFree,   valsCVFree,   color=freeCOL,   linewidth=LW, marker="2", markersize=MS, linestyle=freeLS,   label=freeHS+" (crypto-verif)")
                 if len(faultsCVOnep) > 0:
                     axs[0].plot(faultsCVOnep,   valsCVOnep,   color=onepCOL,   linewidth=LW, marker="2", markersize=MS, linestyle=onepLS,   label=onepHS+" (crypto-verif)")
+                if len(faultsCVRBF) > 0:
+                    axs[0].plot(faultsCVRBF,    valsCVRBF,    color=RoBFCOL,   linewidth=LW, marker="2", markersize=MS, linestyle=RoBFLS,   label=RoBFHS+" (crypto-verif)")
             if plotChained:
                 if len(faultsCVChBase) > 0:
                     axs[0].plot(faultsCVChBase, valsCVChBase, color=baseChCOL, linewidth=LW, marker="2", markersize=MS, linestyle=baseChLS, label=baseChHS+" (crypto-verif)")
@@ -2580,11 +2651,13 @@ def createPlot(pFile):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsCVQuick, valsCVQuick, numsCVQuick):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
-                    for x,y,z in zip(faultsCCVomb, valsCVComb, numsCVComb):
+                    for x,y,z in zip(faultsCVComb, valsCVComb, numsCVComb):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsCVFree, valsCVFree, numsCVFree):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsCVOnep, valsCVOnep, numsCVOnep):
+                        axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
+                    for x,y,z in zip(faultsCVRBF, valsCVRBF, numsCVRBF):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                 if plotChained:
                     for x,y,z in zip(faultsCVChBase, valsCVChBase, numsCVChBase):
@@ -2604,8 +2677,8 @@ def createPlot(pFile):
             subprocess.call([displayApp, plotFile])
         except:
             print("couldn't display the plot using '" + displayApp + "'. Consider changing the 'displayApp' variable.")
-    return (dictTVBase, dictTVCheap, dictTVQuick, dictTVComb, dictTVFree, dictTVOnep, dictTVChBase, dictTVChComb,
-            dictLVBase, dictLVCheap, dictLVQuick, dictLVComb, dictLVFree, dictLVOnep, dictLVChBase, dictLVChComb)
+    return (dictTVBase, dictTVCheap, dictTVQuick, dictTVComb, dictTVFree, dictTVOnep, dictTVChBase, dictTVChComb, dictTVRBF,
+            dictLVBase, dictLVCheap, dictLVQuick, dictLVComb, dictLVFree, dictLVOnep, dictLVChBase, dictLVChComb, dictLVRBF)
 # End of createPlot
 
 
@@ -2674,6 +2747,13 @@ def runExperiments():
         # Chained Cheap&Quick - debug version
         if runChCombDbg:
             computeAvgStats(recompile,protocol=Protocol.CHCOMBDBG,constFactor=2,numClTrans=numClTrans,sleepTime=sleepTime,numViews=numViews,cutOffBound=cutOffBound,numFaults=numFaults,numRepeats=repeats)
+        else:
+            (0.0,0.0,0.0,0.0)
+        # -----
+        # Rollback Faulty
+        if runRBF:
+            print("compute avg stats for RBF")
+            computeAvgStats(recompile,protocol=Protocol.RBF,constFactor=2,numClTrans=numClTrans,sleepTime=sleepTime,numViews=numViews,cutOffBound=cutOffBound,numFaults=numFaults,numRepeats=repeats)
         else:
             (0.0,0.0,0.0,0.0)
 
@@ -2780,6 +2860,10 @@ def createTVLplot(cFile,instances):
     TChComb = []
     aChComb = []
 
+    LRoBF = [] #inconsistent due to keyword LRBF
+    TRoBF = []
+    aRoBF = []
+
     print("reading points from:", cFile)
     f = open(cFile,'r')
     for line in f.readlines():
@@ -2834,6 +2918,10 @@ def createTVLplot(cFile,instances):
                 TChComb.append(throughput)
                 LChComb.append(latency)
                 aChComb.append(sleep)
+            if protVal == "ROLLBACK_FAULTY_PROTECTED":
+                TRoBF.append(throughput)
+                LRoBF.append(latency)
+                aRoBF.append(sleep)
 
     LW = 1 # linewidth
     MS = 5 # markersize
@@ -2853,6 +2941,7 @@ def createTVLplot(cFile,instances):
 
     plt.xlabel("throughput (Kops/sec)", fontsize=12)
     plt.ylabel("latency (ms)", fontsize=12)
+    #TODO: add plotting for RBF here, if values are appended
     if plotBasic:
         if len(TBase) > 0:
             plt.plot(TBase,   LBase,   color=baseCOL,   linewidth=LW, marker=baseMRK,   markersize=MS, linestyle=baseLS,   label=baseHS)
@@ -2866,6 +2955,8 @@ def createTVLplot(cFile,instances):
             plt.plot(TFree,   LFree,   color=freeCOL,   linewidth=LW, marker=freeMRK,   markersize=MS, linestyle=freeLS,   label=freeHS)
         if len(TOnep) > 0:
             plt.plot(TOnep,   LOnep,   color=onepCOL,   linewidth=LW, marker=onepMRK,   markersize=MS, linestyle=onepLS,   label=onepHS)
+        if len(TRoBF) > 0:
+            plt.plot(TRoBF,   LRoBF,   color=RoBFCOL,   linewidth=LW, marker=RoBFMRK,   markersize=MS, linesytel=RoBFLS,   label=RoBFHS)
     if plotChained:
         if len(TChBase) > 0:
             plt.plot(TChBase, LChBase, color=baseChCOL, linewidth=LW, marker=baseChMRK, markersize=MS, linestyle=baseChLS, label=baseChHS)
@@ -2884,6 +2975,8 @@ def createTVLplot(cFile,instances):
             for x,y,z in zip(TFree, LFree, aFree):
                 plt.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
             for x,y,z in zip(TOnep, LOnep, aOnep):
+                plt.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
+            for x,y,z in zip(TRoBF, LRoBF, aRoBF):
                 plt.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
         if plotChained:
             for x,y,z in zip(TChBase, LChBase, aChBase):
@@ -3313,7 +3406,6 @@ def TVLaws():
                   sleepTimes=sleepTimes,
                   repeats=repeats)
 
-
     ## Chained Versions
 
     if runChBase or runChComb:
@@ -3357,7 +3449,7 @@ def TVLaws():
 # End of TVLaws
 
 
-def copyLatestExperiments():
+def copyLatestExperiments(): #TODO: add RBF to methods
     global plotFile
     global tvlFile
     global plotBasic
@@ -3531,6 +3623,7 @@ parser.add_argument("--p5",         action="store_true",   help="sets runChBase 
 parser.add_argument("--p6",         action="store_true",   help="sets runChComb to True (chained Damysus)")
 parser.add_argument("--p7",         action="store_true",   help="sets runFree to True (hash&signature-free Damysus)")
 parser.add_argument("--p8",         action="store_true",   help="sets runOnep to True (1+1/2 phase Damysus)")
+parser.add_argument("--p9",         action="store_true",   help="sets runRBF to True (rollback protection within faulty replicas)")
 parser.add_argument("--pall",       action="store_true",   help="sets all runXXX to True, i.e., all protocols will be executed")
 parser.add_argument("--netlat",     type=int, default=0,   help="network latency in ms")
 parser.add_argument("--netvar",     type=int, default=0,   help="variation of the network latency in ms")
@@ -3714,6 +3807,10 @@ if args.p8:
     runOnep = True
     print("SUCCESSFULLY PARSED ARGUMENT - testing 1+1/2 phase Damysus")
 
+if args.p9:
+    runRBF = True
+    print("SUCCESFULLY PARSED ARGUMENT - testing rollback protected Damysus")
+
 if args.pall:
     runBase   = True
     runCheap  = True
@@ -3723,6 +3820,7 @@ if args.pall:
     runOnep   = True
     runChBase = True
     runChComb = True
+    runRBF    = True
     print("SUCCESSFULLY PARSED ARGUMENT - testing all protocols")
 
 
@@ -3782,6 +3880,9 @@ elif args.containers:
         fact = 2
     elif args.p8:
         prop = Protocol.ONEP
+        fact = 2
+    elif args.p9:
+        prop = Protocol.RBF
         fact = 2
     else:
         prop = Protocol.ONEP

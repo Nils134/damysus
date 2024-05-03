@@ -54,6 +54,12 @@ typedef uint8_t HEADER;
 #define HDR_ADD_LDR_OP       0x34
 #define HDR_ADD_BCK_OP       0x35
 
+//define RBF opcodes
+#define HDR_NEWVIEW_RBF     0x36
+#define HDR_PREPARE_LDR_RBF 0x37
+#define HDR_PREPARE_RBF     0x38
+#define HDR_PRECOMMIT_RBF   0x39
+
 typedef uint8_t Phase1;
 
 #define PH1_NEWVIEW   0x0

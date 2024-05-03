@@ -41,7 +41,7 @@ std::string Handler::nfo() { return "[" + std::to_string(this->myid) + "]"; }
 
 
 
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
 // These versions use trusted components
 #else
 // Trusted Component (would have to be executed in a TEE):
@@ -50,6 +50,7 @@ TrustedAccum ta;
 TrustedComb tc;
 TrustedCh tp; // 'p' for pipelined
 TrustedChComb tq;
+TrustedRBF tr;
 #endif
 
 
@@ -408,7 +409,7 @@ void setCBlock(CBlock block, cblock_t *b) {
 
 // ------------------------------------
 // SGX related stuff
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
 
@@ -497,6 +498,8 @@ void Handler::startNewViewOnTimeout() {
   startNewViewCh();
 #elif defined (CHAINED_CHEAP_AND_QUICK)
   startNewViewChComb();
+#elif defined (ROLLBACK_FAULTY_PROTECTED)
+  startNewViewRBF();
 #else
   recordStats();
 #endif
@@ -545,6 +548,11 @@ const uint8_t MsgPrepareCh::opcode;
 const uint8_t MsgNewViewChComb::opcode;
 const uint8_t MsgLdrPrepareChComb::opcode;
 const uint8_t MsgPrepareChComb::opcode;
+#elif defined(ROLLBACK_FAULTY_PROTECTED)
+const uint8_t MsgNewViewRBF::opcode;
+const uint8_t MsgLdrPrepareRBF::opcode;
+const uint8_t MsgPrepareRBF::opcode;
+const uint8_t MsgPreCommitRBF::opcode;
 #endif
 
 const uint8_t MsgTransaction::opcode;
@@ -571,7 +579,7 @@ pnet(pec,pconf), cnet(cec,cconf) {
 
 
   // Trusted Functions
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   if (DEBUG0) { std::cout << KBLU << nfo() << "initializing TEE" << KNRM << std::endl; }
   initializeSGX();
   if (DEBUG0) { std::cout << KBLU << nfo() << "initialized TEE" << KNRM << std::endl; }
@@ -581,6 +589,7 @@ pnet(pec,pconf), cnet(cec,cconf) {
   tc = TrustedComb(this->myid,this->priv,this->qsize);
   tp = TrustedCh(this->myid,this->priv,this->qsize);
   tq = TrustedChComb(this->myid,this->priv,this->qsize);
+  tr = TrustedRBF(this->myid,this->priv, this->qsize);
 #endif
   //getStarted();
 
@@ -701,6 +710,11 @@ pnet(pec,pconf), cnet(cec,cconf) {
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_newview_ch_comb,    this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_prepare_ch_comb,    this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_ldrprepare_ch_comb, this, _1, _2));
+#elif defined(ROLLBACK_FAULTY_PROTECTED)
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_newviewrbf,    this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_ldrpreparerbf, this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_preparerbf,    this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_precommitrbf,  this, _1, _2));
 #else
   std::cout << KRED << nfo() << "TODO" << KNRM << std::endl;
 #endif
@@ -939,6 +953,31 @@ void Handler::sendMsgPreCommitComb(MsgPreCommitComb msg, Peers recipients) {
   if (DEBUGT) printNowTime("sending MsgPreCommitComb");
 }
 
+//RBF
+void Handler::sendMsgNewViewRBF(MsgNewViewRBF msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgNewViewRBF");
+}
+
+void Handler::sendMsgLdrPrepareRBF(MsgLdrPrepareRBF msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgLdrPrepareRBF");
+}
+
+void Handler::sendMsgPrepareRBF(MsgPrepareRBF msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgPrepareRBF");
+}
+
+void Handler::sendMsgPreCommitRBF(MsgPreCommitRBF msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgPreCommitRBF");
+}
+
 
 void Handler::sendMsgNewViewFree(MsgNewViewFree msg, Peers recipients) {
   if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
@@ -1063,7 +1102,7 @@ void Handler::sendMsgLdrPrepareChComb(MsgLdrPrepareChComb msg, Peers recipients)
 
 Just Handler::callTEEsign() {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
   sgx_status_t ret;
   sgx_status_t status = TEEsign(global_eid, &ret, &jout);
@@ -1081,7 +1120,7 @@ Just Handler::callTEEsign() {
 
 Just Handler::callTEEprepare(Hash h, Just j) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
   just_t jin;
   setJust(j,&jin);
@@ -1103,7 +1142,7 @@ Just Handler::callTEEprepare(Hash h, Just j) {
 
 Just Handler::callTEEstore(Just j) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
   just_t jin;
   setJust(j,&jin);
@@ -1143,7 +1182,7 @@ Just Handler::callTEEstore(Just j) {
 
 Accum Handler::callTEEaccum(Vote<Void,Cert> votes[MAX_NUM_SIGNATURES]) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   accum_t aout;
   votes_t vin;
   setVotes(votes,&vin);
@@ -1167,7 +1206,7 @@ Accum Handler::callTEEaccum(Vote<Void,Cert> votes[MAX_NUM_SIGNATURES]) {
 // a simpler version of callTEEaccum for when all votes are for the same payload
 Accum Handler::callTEEaccumSp(uvote_t vote) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   accum_t aout;
   sgx_status_t ret;
   sgx_status_t status = TEEaccumSp(global_eid, &ret, &vote, &aout);
@@ -1185,7 +1224,7 @@ Accum Handler::callTEEaccumSp(uvote_t vote) {
 
 Accum Handler::callTEEaccumComb(Just justs[MAX_NUM_SIGNATURES]) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   accum_t aout;
   onejusts_t jin;
   setOneJusts(justs,&jin);
@@ -1205,7 +1244,7 @@ Accum Handler::callTEEaccumComb(Just justs[MAX_NUM_SIGNATURES]) {
 // a simpler version of callTEEaccum for when all votes are for the same payload
 Accum Handler::callTEEaccumCombSp(just_t just) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   accum_t aout;
   sgx_status_t ret;
   sgx_status_t status = COMB_TEEaccumSp(global_eid, &ret, &just, &aout);
@@ -1222,7 +1261,7 @@ Accum Handler::callTEEaccumCombSp(just_t just) {
 
 Just Handler::callTEEsignComb() {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
   sgx_status_t ret;
   sgx_status_t status = COMB_TEEsign(global_eid, &ret, &jout);
@@ -1239,7 +1278,7 @@ Just Handler::callTEEsignComb() {
 
 Just Handler::callTEEprepareComb(Hash h, Accum acc) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
   accum_t ain;
   setAccum(acc,&ain);
@@ -1260,7 +1299,7 @@ Just Handler::callTEEprepareComb(Hash h, Accum acc) {
 
 Just Handler::callTEEstoreComb(Just j) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
   just_t jin;
   setJust(j,&jin);
@@ -1281,7 +1320,7 @@ Just Handler::callTEEstoreComb(Just j) {
 bool Handler::callTEEverifyFree(Auths auths, std::string s) {
   auto start = std::chrono::steady_clock::now();
   bool b = false;
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(ROLLBACK_FAULTY_PROTECTED)
   payload_t pin;
   setPayload(s,&pin);
   auths_t ain;
@@ -1304,7 +1343,7 @@ bool Handler::callTEEverifyFree(Auths auths, std::string s) {
 bool Handler::callTEEverifyFree2(Auths auths1, std::string s1, Auths auths2, std::string s2) {
   auto start = std::chrono::steady_clock::now();
   bool b = false;
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(ROLLBACK_FAULTY_PROTECTED)
   payload_t pin1;
   setPayload(s1,&pin1);
   auths_t ain1;
@@ -1331,7 +1370,7 @@ bool Handler::callTEEverifyFree2(Auths auths1, std::string s1, Auths auths2, std
 Auth Handler::callTEEauthFree(std::string s) {
   auto start = std::chrono::steady_clock::now();
   Auth a;
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(ROLLBACK_FAULTY_PROTECTED)
   payload_t pin;
   setPayload(s,&pin);
   auth_t aout;
@@ -1394,7 +1433,7 @@ HJust Handler::callTEEprepareFree(Hash h) {
 
 FVJust Handler::callTEEstoreFree(PJust j) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   fvjust_t jout;
   pjust_t jin;
   setPJust(j,&jin);
@@ -1415,7 +1454,7 @@ FVJust Handler::callTEEstoreFree(PJust j) {
 
 HAccum Handler::callTEEaccumFree(FJust high, FJust justs[MAX_NUM_SIGNATURES-1], Hash hash) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   haccum_t aout;
   fjust_t jin;
   fjusts_t jsin;
@@ -1441,7 +1480,7 @@ HAccum Handler::callTEEaccumFree(FJust high, FJust justs[MAX_NUM_SIGNATURES-1], 
 // a simpler version of callTEEaccum for when all votes are for the same payload
 HAccum Handler::callTEEaccumFreeSp(ofjust_t just, Hash hash) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   haccum_t aout;
   hash_t hin;
   setHash(hash,&hin);
@@ -1605,7 +1644,7 @@ OPvote Handler::callTEEvoteOP(Hash h) {
 
 Just Handler::callTEEsignCh() {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
   sgx_status_t ret;
   sgx_status_t status = CH_TEEsign(global_eid, &ret, &jout);
@@ -1623,7 +1662,7 @@ Just Handler::callTEEsignCh() {
 
 Just Handler::callTEEprepareCh(JBlock block, JBlock block0, JBlock block1) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
   // 1st block
   jblock_t jin;
@@ -1651,7 +1690,7 @@ Just Handler::callTEEprepareCh(JBlock block, JBlock block0, JBlock block1) {
 
 Just Handler::callTEEsignChComb() {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
   sgx_status_t ret;
   sgx_status_t status = CH_COMB_TEEsign(global_eid, &ret, &jout);
@@ -1669,7 +1708,7 @@ Just Handler::callTEEsignChComb() {
 
 Just Handler::callTEEprepareChComb(CBlock block, Hash hash) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
   // 1st block
   cblock_t cin;
@@ -1696,7 +1735,7 @@ Just Handler::callTEEprepareChComb(CBlock block, Hash hash) {
 
 Accum Handler::callTEEaccumChComb(Just justs[MAX_NUM_SIGNATURES]) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   accum_t aout;
   onejusts_t jin;
   setOneJusts(justs,&jin);
@@ -1717,7 +1756,7 @@ Accum Handler::callTEEaccumChComb(Just justs[MAX_NUM_SIGNATURES]) {
 // a simpler version of callTEEaccumChComb for when all votes are for the same payload
 Accum Handler::callTEEaccumChCombSp(just_t just) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   accum_t aout;
   sgx_status_t ret;
   sgx_status_t status = CH_COMB_TEEaccumSp(global_eid, &ret, &just, &aout);
@@ -1776,7 +1815,7 @@ void Handler::getStarted() {
   // We start the timer
   //setTimer();
 
-#if defined(BASIC_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP_AND_QUICK) 
   Just j = callTEEsignComb();
   if (j.getSigns().getSize() == 1) {
     MsgNewViewComb msg(j.getRData(),j.getSigns().get(0));
@@ -1857,6 +1896,15 @@ void Handler::getStarted() {
     handleEarlierMessagesChComb();
   }
   if (DEBUG) std::cout << KBLU << nfo() << "sent new-view to leader(" << nextLeader << ")" << KNRM << std::endl;
+#elif defined(ROLLBACK_FAULTY_PROTECTED)
+  Just j = callTEEsignRBF();
+  if (j.getSigns().getSize() == 1) {
+    MsgNewViewRBF msg(j.getRData(),j.getSigns().get(0));
+    if (DEBUG1) std::cout << KBLU << nfo() << "starting with:" << msg.prettyPrint() << KNRM << std::endl;
+    if (amCurrentLeader()) { handleNewviewRBF(msg); }
+    else { sendMsgNewViewRBF(msg,recipients); }
+  }
+  if (DEBUG) std::cout << KBLU << nfo() << "sent new-view to leader(" << leader << ")" << KNRM << std::endl;
 #endif
 }
 
@@ -2967,7 +3015,6 @@ void Handler::handle_precommitacc(MsgPreCommitAcc msg, const PeerNet::conn_t &co
   handlePreCommitAcc(msg);
 }
 
-
 // ----------------------------------------------
 // -- Combined version
 // --
@@ -3370,7 +3417,489 @@ void Handler::handle_precommitcomb(MsgPreCommitComb msg, const PeerNet::conn_t &
   handlePreCommitComb(msg);
 }
 
+// ----------------------------------------------
+// -- Rollback faulty RBF version
+// --
 
+void Handler::executeRBF(RData data) {
+  //std::lock_guard<std::mutex> guard(mu_trans);
+  auto endView = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(endView - startView).count();
+  startView = endView;
+  stats.incExecViews();
+  stats.addTotalViewTime(time);
+  if (this->transactions.empty()) { this->viewsWithoutNewTrans++; } else { this->viewsWithoutNewTrans = 0; }
+
+  // Execute
+  // TODO: We should wait until we received the block corresponding to the hash to execute
+  if (DEBUG0 && DEBUGE) std::cout << KRED << nfo() << "RBF-EXECUTE(" << this->view << "/" << this->maxViews << ":" << time << ")" << stats.toString() << KNRM << std::endl;
+
+  // Reply
+  replyHash(data.getProph());
+
+  if (timeToStop()) {
+    recordStats();
+  } else {
+    startNewViewRBF();
+  }
+}
+
+void Handler::handleEarlierMessagesRBF(){
+  // *** THIS IS FOR LATE NODES TO PRO-ACTIVELY PROCESS MESSAGES THEY HAVE ALREADY RECEIVED FOR THE NEW VIEW ***
+  // We now check whether we already have enough information to start the next view if we're the leader
+  if (amCurrentLeader()) {
+    std::set<MsgNewViewRBF> newviews = this->log.getNewViewRBF(this->view,this->qsize);
+    if (newviews.size() == this->qsize) {
+      // we have enough new view messages to start the new view
+      prepareRBF();
+    }
+  } else {
+    // First we check whether the view has already been locked
+    // (i.e., we received a pre-commit certificate from the leader),
+    // in which case we don't need to go through the previous steps.
+    Signs signsPc = (this->log).getPrecommitRBF(this->view,this->qsize);
+    if (signsPc.getSize() == this->qsize) {
+      if (DEBUG1) std::cout << KMAG << nfo() << "catching up using pre-commit certificate" << KNRM << std::endl;
+      // We skip the prepare phase (this is otherwise a TEEprepareRBF):
+      callTEEsignRBF();
+      // We skip the pre-commit phase (this is otherwise a TEEstoreRBF):
+      callTEEsignRBF();
+      // We execute
+      MsgPreCommitRBF msgPc = this->log.firstPrecommitRBF(this->view);
+      respondToPreCommitRBF(msgPc);
+    } else { // We don't have enough pre-commit signatures
+      Signs signsPrep = (this->log).getPrepareRBF(this->view,this->qsize);
+      if (signsPrep.getSize() == this->qsize) {
+        if (DEBUG1) std::cout << KMAG << nfo() << "catching up using prepare certificate" << KNRM << std::endl;
+        // TODO: If we're late, we currently store two prepare messages (in the prepare phase,
+        // the one from the leader with 1 sig; and in the pre-commit phase, the one with f+1 sigs.
+        MsgPrepareRBF msgPrep = this->log.firstPrepareRBF(this->view);
+        // We skip the prepare phase (this is otherwise a TEEprepare):
+        callTEEsign();
+        // We store the prepare certificate
+        respondToPrepareRBF(msgPrep);
+      } else {
+        MsgLdrPrepareRBF msgProp = this->log.firstLdrPrepareRBF(this->view);
+        if (msgProp.sign.isSet()) { // If we've stored the leader's proposal
+          if (DEBUG1) std::cout << KMAG << nfo() << "catching up using leader proposal" << KNRM << std::endl;
+          respondToLdrPrepareRBF(msgProp.block,msgProp.acc);
+        }
+      }
+    }
+  }
+}
+
+void Handler::startNewViewRBF() {
+  Just just = callTEEsignRBF();
+  // generate justifications until we can generate one for the next view
+  while (just.getRData().getPropv() <= this->view) { just = callTEEsignRBF(); }
+  // increment the view
+  // *** THE NODE HAS NOW MOVED TO THE NEW-VIEW ***
+  this->view++;
+
+  // We start the timer
+  setTimer();
+
+  // if the lastest justification we've generated is for what is now the current view (since we just incremented it)
+  // and round 0, then send a new-view message
+  if (just.getRData().getPropv() == this->view
+      && just.getRData().getPhase() == PH1_NEWVIEW
+      && just.getSigns().getSize() == 1) {
+    MsgNewViewRBF msg(just.getRData(),just.getSigns().get(0));
+    if (amCurrentLeader()) {
+      handleEarlierMessagesRBF();
+      handleNewviewRBF(msg);
+    }
+    else {
+      PID leader = getCurrentLeader();
+      Peers recipients = keep_from_peers(leader);
+      sendMsgNewViewRBF(msg,recipients);
+      handleEarlierMessagesRBF();
+    }
+  } else {
+    // Something wrong happened
+  }
+}
+
+
+// For leaders to start preparing
+void Handler::prepareRBF(){
+  std::set<MsgNewViewRBF> newviews = this->log.getNewViewRBF(this->view,this->qsize);
+  if (newviews.size() == this->qsize) {
+    Accum acc = newviews2accRBF(newviews);
+
+    if (acc.isSet()) {
+      // New block
+      Block block = createNewBlock(acc.getPreph());
+
+      // This one we'll store, and wait until we have this->qsize of them
+      Just justPrep = callTEEprepareRBF(block.hash(),acc);
+      if (justPrep.isSet()) {
+        if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.prettyPrint() << KNRM << std::endl;
+        if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.hash().toString() << KNRM << std::endl;
+        this->blocks[this->view]=block;
+
+        MsgPrepareRBF msgPrep(justPrep.getRData(),justPrep.getSigns());
+
+        if (DEBUG1) std::cout << KBLU << nfo() << "ldr-prepare:" << msgPrep.signs.getSize() << KNRM << std::endl;
+        if (msgPrep.signs.getSize() == 1) {
+          Sign sig = msgPrep.signs.get(0);
+
+          auto start = std::chrono::steady_clock::now();
+
+          // This one goes to the backups
+          MsgLdrPrepareRBF msgLdrPrep(acc,block,sig);
+          Peers recipients = remove_from_peers(this->myid);
+          sendMsgLdrPrepareRBF(msgLdrPrep,recipients);
+
+          auto end = std::chrono::steady_clock::now();
+          double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+          stats.addTotalPrepTime(time);
+
+          if (this->log.storePrepRBF(msgPrep) == this->qsize) {
+            preCommitRBF(msgPrep.data);
+          }
+        }
+      }
+    } else {
+      if (DEBUG2) std::cout << KBLU << nfo() << "bad accumulator" << acc.prettyPrint() << KNRM << std::endl;
+    }
+  }
+}
+
+// For leaders to start pre-committing
+void Handler::preCommitRBF(RData data) {
+  Signs signs = (this->log).getPrepareRBF(data.getPropv(),this->qsize);
+  // We should not need to check the size of 'signs' as this function should only be called, when this is possible
+  if (signs.getSize() == this->qsize) {
+    MsgPrepareRBF msgPrep(data,signs);
+    Peers recipients = remove_from_peers(this->myid);
+    sendMsgPrepareRBF(msgPrep,recipients);
+
+    // The leader also stores the prepare message
+    Just justPc = callTEEstoreRBF(Just(data,signs));
+    MsgPreCommitRBF msgPc(justPc.getRData(),justPc.getSigns());
+
+    // We store our own commit in the log
+    if (this->qsize <= this->log.storePcRBF(msgPc)) {
+      decideRBF(justPc.getRData());
+    }
+  }
+}
+
+// For leaders to start deciding
+void Handler::decideRBF(RData data) {
+  View view = data.getPropv();
+  Signs signs = (this->log).getPrecommitRBF(view,this->qsize);
+  if (signs.getSize() == this->qsize) {
+    MsgPreCommitRBF msgPc(data,signs);
+    Peers recipients = remove_from_peers(this->myid);
+    sendMsgPreCommitRBF(msgPc,recipients);
+
+    if (verifyPreCommitRBFCert(msgPc)) {
+      executeRBF(data);
+    }
+  }
+}
+
+// For backups to respond to correct MsgLdrPrepareRBF messages received from leaders
+void Handler::respondToLdrPrepareRBF(Block block, Accum acc){
+  Just justPrep = callTEEprepareRBF(block.hash(),acc);
+  if (justPrep.isSet()) {
+    if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.prettyPrint() << KNRM << std::endl;
+    this->blocks[this->view]=block;
+
+    MsgPrepareRBF msgPrep(justPrep.getRData(),justPrep.getSigns());
+    PID leader = getCurrentLeader();
+    Peers recipients = keep_from_peers(leader);
+    sendMsgPrepareRBF(msgPrep,recipients);
+  }
+}
+
+// For backups to respond to MsgPrepareRBF messages receveid from leaders
+void Handler::respondToPrepareRBF(MsgPrepareRBF msg) {
+  Just justPc = callTEEstoreRBF(Just(msg.data,msg.signs));
+  if (DEBUG1) { std::cout << KMAG << nfo() << "TEEstoreRBF just:" << justPc.prettyPrint() << KNRM << std::endl; }
+  MsgPreCommitRBF msgPc(justPc.getRData(),justPc.getSigns());
+  Peers recipients = keep_from_peers(getCurrentLeader());
+  sendMsgPreCommitRBF(msgPc,recipients);
+}
+
+
+void Handler::respondToPreCommitRBF(MsgPreCommitRBF msg){
+  if (verifyPreCommitRBFCert(msg)) {
+    executeRBF(msg.data);
+  }
+}
+
+
+Accum Handler::newviews2accRBF(std::set<MsgNewViewRBF> newviews){
+  // TODO: We don't quite need Justs here because we need only 1 signature
+  Just justs[MAX_NUM_SIGNATURES]; // MAX_NUM_SIGNATURES is supposed to be == this->qsize
+
+  RData rdata;
+  Signs ss;
+
+  unsigned int i = 0;
+  for (std::set<MsgNewViewRBF>::iterator it=newviews.begin(); it!=newviews.end() && i < MAX_NUM_SIGNATURES; ++it, i++) {
+    MsgNewViewRBF msg = (MsgNewViewRBF)*it;
+    if (i == 0) { rdata = msg.data; ss.add(msg.sign); } else { if (msg.data == rdata) { ss.add(msg.sign); } }
+    justs[i] = Just(msg.data,msg.sign);
+    if (DEBUG1) std::cout << KBLU << nfo() << "newview:" << msg.prettyPrint() << KNRM << std::endl;
+    if (DEBUG1) std::cout << KBLU << nfo() << "just:" << justs[i].prettyPrint() << KNRM << std::endl;
+  }
+
+  Accum acc;
+  if (ss.getSize() >= this->qsize) {
+    // Then all the payloads are the same, in which case, we can use the simpler version of the accumulator
+    if (DEBUG1) std::cout << KLGRN << nfo() << "newviews same(" << ss.getSize() << ")" << KNRM << std::endl;
+    just_t just;
+    just.set = 1;
+    setRData(rdata,&just.rdata);
+    setSigns(ss,&just.signs);
+    acc = callTEEaccumRBFSp(just);
+  } else{
+    if (DEBUG1) std::cout << KLRED << nfo() << "{rbf} newviews diff (" << ss.getSize() << ")" << KNRM << std::endl;
+    acc = callTEEaccumRBF(justs);
+  }
+
+  return acc;
+}
+
+Accum Handler::callTEEaccumRBF(Just justs[MAX_NUM_SIGNATURES]){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  accum_t aout;
+  onejusts_t jin;
+  setOneJusts(justs,&jin);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEaccum(global_eid, &ret, &jin, &aout);
+  Accum acc = getAccum(&aout);
+#else
+  Accum acc = tr.TEEaccum(stats,this->nodes,justs);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEaccum(time);
+  stats.addTEEtime(time);
+  return acc;
+}
+
+Accum Handler::callTEEaccumRBFSp(just_t just){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  accum_t aout;
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEaccumSp(global_eid, &ret, &just, &aout);
+  Accum acc = getAccum(&aout);
+#else
+  Accum acc = tr.TEEaccumSp(stats,this->nodes,just);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEaccum(time);
+  stats.addTEEtime(time);
+  return acc;
+}
+
+Just Handler::callTEEsignRBF(){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  just_t jout;
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEsign(global_eid, &ret, &jout);
+  Just just = getJust(&jout);
+#else
+  Just just = tr.TEEsign();
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEsign(time);
+  stats.addTEEtime(time);
+  return just;
+}
+
+Just Handler::callTEEprepareRBF(Hash h, Accum acc){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  just_t jout;
+  accum_t ain;
+  setAccum(acc,&ain);
+  hash_t hin;
+  setHash(h,&hin);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEprepare(global_eid, &ret, &hin, &ain, &jout);
+  Just just = getJust(&jout);
+#else
+  Just just = tr.TEEprepare(stats,this->nodes,h,acc);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEprepare(time);
+  stats.addTEEtime(time);
+  return just;
+}
+
+Just Handler::callTEEstoreRBF(Just j){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  just_t jout;
+  just_t jin;
+  setJust(j,&jin);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEstore(global_eid, &ret, &jin, &jout);
+  Just just = getJust(&jout);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEstore(time);
+  stats.addTEEtime(time);
+  return just;
+}
+
+
+void Handler::handleNewviewRBF(MsgNewViewRBF msg){
+  auto start = std::chrono::steady_clock::now();
+  if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
+  View v = msg.data.getPropv();
+  if (v >= this->view && amLeaderOf(v)) {
+    if (this->log.storeNvRBF(msg) == this->qsize && v == this->view) {
+      prepareRBF();
+    }
+  } else {
+    if (DEBUG1) std::cout << KMAG << nfo() << "discarded:" << msg.prettyPrint() << KNRM << std::endl;
+  }
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTotalHandleTime(time);
+  stats.addTotalNvTime(time);
+}
+
+void Handler::handlePrepareRBF(MsgPrepareRBF msg){
+  auto start = std::chrono::steady_clock::now();
+  if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
+  RData data = msg.data;
+  View v = data.getPropv();
+  if (v == this->view) {
+    if (amLeaderOf(v)) {
+      // Beginning of pre-commit phase, we store messages until we get enough of them to start pre-committing
+      if (this->log.storePrepRBF(msg) == this->qsize) {
+        preCommitRBF(data);
+      }
+    } else {
+      // Backups wait for a MsgPrepareAcc message from the leader that contains qsize signatures in the pre-commit phase
+      respondToPrepareRBF(msg);
+    }
+  } else {
+    if (DEBUG1) std::cout << KMAG << nfo() << "storing:" << msg.prettyPrint() << KNRM << std::endl;
+    if (v > this->view) { log.storePrepRBF(msg); }
+  }
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTotalHandleTime(time);
+}
+
+//TODO: check MsgLdrPrepareComb message type valid for RBF
+void Handler::handleLdrPrepareRBF(MsgLdrPrepareRBF msg) {
+  auto start = std::chrono::steady_clock::now();
+  if (DEBUG1) std::cout << KBLU << nfo() << "RBF handling:" << msg.prettyPrint() << KNRM << std::endl;
+  Accum acc   = msg.acc;
+  Block block = msg.block;
+  View v      = acc.getView();
+  Hash hash   = acc.getPreph();
+  bool vm     = verifyLdrPrepareRBF(msg);
+  if (v >= this->view
+      && !amLeaderOf(v)
+      && vm
+      && acc.getSize() == this->qsize
+      && block.extends(hash)) {
+    if (v == this->view) {
+      respondToLdrPrepareRBF(block,acc);
+    } else {
+      // If the message is for later, we store it
+      if (DEBUG1) std::cout << KMAG << nfo() << "storing:" << msg.prettyPrint() << KNRM << std::endl;
+      this->log.storeLdrPrepRBF(msg);
+    }
+  } else {
+    if (DEBUG1) std::cout << KMAG << nfo() << "discarded:" << msg.prettyPrint() << KNRM << std::endl;
+    if (DEBUG1) std::cout << KMAG << nfo() << "because:"
+                          << "check-view=" << std::to_string(v >= this->view)
+                          << ";check-leader=" << std::to_string(!amLeaderOf(v))
+                          << ";verif-msg=" << std::to_string(vm)
+                          << ";check-quorum=" << std::to_string(acc.getSize() == this->qsize)
+                          << "(acc-size=" << std::to_string(acc.getSize()) << ",quorum-size=" << std::to_string(this->qsize) << ")"
+                          << ";check-extends=" << std::to_string(block.extends(hash))
+                          << KNRM << std::endl;
+  }
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTotalHandleTime(time);
+  if (DEBUGT) std::cout << KMAG << nfo() << "MsgLdrPrepareRBF3:" << time << KNRM << std::endl;
+
+}
+
+void Handler::handlePreCommitRBF(MsgPreCommitRBF msg){
+  auto start = std::chrono::steady_clock::now();
+  if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
+  RData data = msg.data;
+  View v = data.getPropv();
+  if (v == this->view) {
+    if (amLeaderOf(v)) {
+      // Beginning of decide phase, we store messages until we get enough of them to start deciding
+      if (this->log.storePcRBF(msg) == this->qsize) {
+        decideRBF(data);
+      }
+    } else {
+      // Backups wait for a MsgPreCommitComb message from the leader that contains qsize signatures in the decide phase
+      respondToPreCommitRBF(msg);
+    }
+  } else {
+    if (DEBUG1) std::cout << KMAG << nfo() << "storing:" << msg.prettyPrint() << KNRM << std::endl;
+    if (v > this->view) { log.storePcRBF(msg); }
+  }
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTotalHandleTime(time);
+}
+
+void Handler::handle_newviewrbf(MsgNewViewRBF msg, const PeerNet::conn_t &conn) {
+  if (DEBUGT) printNowTime("handling MsgNewViewRBF");
+  handleNewviewRBF(msg);
+}
+
+void Handler::handle_preparerbf(MsgPrepareRBF msg, const PeerNet::conn_t &conn) {
+  if (DEBUGT) printNowTime("handling MsgPrepareRBF");
+  handlePrepareRBF(msg);
+}
+
+void Handler::handle_ldrpreparerbf(MsgLdrPrepareRBF msg, const PeerNet::conn_t &conn) {
+  if (DEBUGT) printNowTime("handling MsgLdrPrepareRBF");
+  handleLdrPrepareRBF(msg);
+}
+
+void Handler::handle_precommitrbf(MsgPreCommitRBF msg, const PeerNet::conn_t &conn) {
+  if (DEBUGT) printNowTime("handling MsgPreCommitRBF");
+  handlePreCommitRBF(msg);
+}
+
+
+bool Handler::verifyLdrPrepareRBF(MsgLdrPrepareRBF msg) {
+  Accum acc   = msg.acc;
+  Block block = msg.block;
+  RData rdataLdrPrep(block.hash(),acc.getView(),acc.getPreph(),acc.getPrepv(),PH1_PREPARE);
+  Signs signs = Signs(msg.sign);
+  return Sverify(signs,this->myid,this->nodes,rdataLdrPrep.toString());
+}
+
+bool Handler::verifyPreCommitRBFCert(MsgPreCommitRBF msg) {
+  Signs signs = msg.signs;
+  if (signs.getSize() == this->qsize) {
+    return Sverify(signs,this->myid,this->nodes,msg.data.toString());
+  }
+  return false;
+}
 
 
 // ----------------------------------------------

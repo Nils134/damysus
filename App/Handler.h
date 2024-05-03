@@ -21,7 +21,7 @@
 
 // ------------------------------------
 // SGX related stuff
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
 //
 #include "Enclave_u.h"
 #include "sgx_urts.h"
@@ -34,6 +34,7 @@
 #include "TrustedComb.h"
 #include "TrustedCh.h"
 #include "TrustedChComb.h"
+#include "TrustedRBF.h"
 //
 #endif
 // ------------------------------------
@@ -178,6 +179,11 @@ class Handler {
   void sendMsgPrepareAcc(MsgPrepareAcc msg, Peers recipients);
   void sendMsgPreCommitAcc(MsgPreCommitAcc msg, Peers recipients);
 
+  void sendMsgNewViewRBF(MsgNewViewRBF msg, Peers recipients);
+  void sendMsgLdrPrepareRBF(MsgLdrPrepareRBF msg, Peers recipients);
+  void sendMsgPrepareRBF(MsgPrepareRBF msg, Peers recipients);
+  void sendMsgPreCommitRBF(MsgPreCommitRBF msg, Peers recipients);
+
   void sendMsgNewViewComb(MsgNewViewComb msg, Peers recipients);
   void sendMsgLdrPrepareComb(MsgLdrPrepareComb msg, Peers recipients);
   void sendMsgPrepareComb(MsgPrepareComb msg, Peers recipients);
@@ -222,6 +228,10 @@ class Handler {
 
   bool verifyLdrPrepareComb(MsgLdrPrepareComb msg);
   bool verifyPreCommitCombCert(MsgPreCommitComb msg);
+
+  //RBF
+  bool verifyLdrPrepareRBF(MsgLdrPrepareRBF msg);
+  bool verifyPreCommitRBFCert(MsgPreCommitRBF msg);
 
   bool verifyLdrPrepareFree(HAccum acc, Block block);
   bool verifyPreCommitFreeCert(MsgPreCommitFree msg);
@@ -365,6 +375,46 @@ class Handler {
   void handle_ldrpreparecomb(MsgLdrPrepareComb msg, const PeerNet::conn_t &conn);
   void handle_precommitcomb(MsgPreCommitComb msg, const PeerNet::conn_t &conn);
 
+
+  // ------------------------------------------------------------
+  // RBF
+  // ------
+
+  void executeRBF(RData rdata);
+  void handleEarlierMessagesRBF();
+  void startNewViewRBF();
+
+  // For leaders to start preparing
+  void prepareRBF();
+  // For leaders to start pre-committing
+  void preCommitRBF(RData data);
+  // For leaders to start deciding
+  void decideRBF(RData data);
+
+  // For backups to respond to correct MsgLdrPrepareRBF messages received from leaders
+  void respondToLdrPrepareRBF(Block block, Accum acc);
+  // For backups to respond to MsgPrepareRBF messages receveid from leaders
+  void respondToPrepareRBF(MsgPrepareRBF msg);
+  // For backups to respond to MsgPreCommitRBF messages receveid from leaders
+  void respondToPreCommitRBF(MsgPreCommitRBF msg);
+
+  Accum newviews2accRBF(std::set<MsgNewViewRBF> newviews);
+
+  Accum callTEEaccumRBF(Just justs[MAX_NUM_SIGNATURES]);
+  Accum callTEEaccumRBFSp(just_t just);
+  Just callTEEsignRBF();
+  Just callTEEprepareRBF(Hash h, Accum acc);
+  Just callTEEstoreRBF(Just j);
+
+  void handleNewviewRBF(MsgNewViewRBF msg);
+  void handlePrepareRBF(MsgPrepareRBF msg);
+  void handleLdrPrepareRBF(MsgLdrPrepareRBF msg);
+  void handlePreCommitRBF(MsgPreCommitRBF msg);
+
+  void handle_newviewrbf(MsgNewViewRBF msg, const PeerNet::conn_t &conn);
+  void handle_preparerbf(MsgPrepareRBF msg, const PeerNet::conn_t &conn);
+  void handle_ldrpreparerbf(MsgLdrPrepareRBF msg, const PeerNet::conn_t &conn);
+  void handle_precommitrbf(MsgPreCommitRBF msg, const PeerNet::conn_t &conn);
 
 
   // ------------------------------------------------------------
