@@ -3986,6 +3986,17 @@ void Handler::handlePreCommitRBF(MsgPreCommitRBF msg){
   stats.addTotalHandleTime(time);
 }
 
+void Handler::handleWishRBF(MsgWishRBF msg) {
+  //TODO: what happens upon threshold of messages
+
+  //TODO: else store the message for later usage
+}
+  
+void Handler::handleRecoveryRBF(MsgRecoverRBF msg) {
+  //TODO: else store the message for later usage after threshold of wish messages
+
+}
+
 void Handler::handle_newviewrbf(MsgNewViewRBF msg, const PeerNet::conn_t &conn) {
   if (DEBUGT) printNowTime("handling MsgNewViewRBF");
   handleNewviewRBF(msg);
@@ -4004,6 +4015,14 @@ void Handler::handle_ldrpreparerbf(MsgLdrPrepareRBF msg, const PeerNet::conn_t &
 void Handler::handle_precommitrbf(MsgPreCommitRBF msg, const PeerNet::conn_t &conn) {
   if (DEBUGT) printNowTime("handling MsgPreCommitRBF");
   handlePreCommitRBF(msg);
+}
+
+void Handler::handle_wishrbf(MsgWishRBF msg, const PeerNet::conn_t &conn){
+
+}
+
+void Handler::handle_recoveryrbf(MsgRecoverRBF msg, const PeerNet::conn_t &conn){
+  
 }
 
 
