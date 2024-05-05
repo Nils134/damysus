@@ -20,7 +20,10 @@ class Recovery {
   Recovery(View view, View recoveredView, Sign sign);
 
   bool  isSet();
-  Signs getSigns();
+  Sign getSign();
+  uint32_t getNonce();
+  View getView();
+
 
   void serialize(salticidae::DataStream &data) const;
   void unserialize(salticidae::DataStream &data);

@@ -20,7 +20,9 @@ class Wish {
   Wish(View view, View recoveredView, Sign sign);
 
   bool  isSet();
-  Signs getSigns();
+  View getView(); 
+  View getRecView();
+  Sign getSign();
 
   void serialize(salticidae::DataStream &data) const;
   void unserialize(salticidae::DataStream &data);

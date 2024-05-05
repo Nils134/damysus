@@ -14,6 +14,11 @@ Wish::Wish(View view, View recoveredView, Sign sign) {
   this->sign = sign;
 }
 
+bool  Wish::isSet() { return this->set;}
+View Wish::getView() { return this->view;}
+View Wish::getRecView() {return this->recoveredView;}
+Sign Wish::getSign() {return this->sign;}
+
 void Wish::serialize(salticidae::DataStream &data) const {
   data << this->set << this->view << this->recoveredView << this->sign;
 }
