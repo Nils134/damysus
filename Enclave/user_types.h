@@ -251,5 +251,15 @@ typedef struct _opaccum_t
   auth_t auth;
 } opaccum_t;
 
+typedef struct _recovery_t {
+  View view;
+  uint32_t nonce;
+} recovery_t;
+
+typedef struct _wish_t {
+  View  view;
+  View recoverdView;
+} wish_t;
+
 
 #endif
