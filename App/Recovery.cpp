@@ -14,17 +14,17 @@ Recovery::Recovery(View view, u_int32_t nonce, Sign sign) {
   this->sign = sign;
 }
 
-bool  isSet() { return this->set;}
-View getView() {return this->view;}
-uint32_t getNonce() {return this->nonce;}
-Sign getSign() { return this->sign;}
+bool  Recovery::isSet() { return this->set;}
+View Recovery::getView() {return this->view;}
+uint32_t Recovery::getNonce() {return this->nonce;}
+Sign Recovery::getSign() { return this->sign;}
 
-void Wish::serialize(salticidae::DataStream &data) const {
+void Recovery::serialize(salticidae::DataStream &data) const {
   data << this->set << this->view << this->nonce << this->sign;
 }
 
 
-void Wish::unserialize(salticidae::DataStream &data) {
+void Recovery::unserialize(salticidae::DataStream &data) {
   data >> this->set >> this->view >> this->nonce >> this->sign;
 }
 

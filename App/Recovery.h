@@ -2,7 +2,7 @@
 #define RECOVERY_H
 
 
-#include "Signs.h"
+#include "Sign.h"
 
 #include "salticidae/stream.h"
 
@@ -17,7 +17,7 @@ class Recovery {
 
  public:
   Recovery();
-  Recovery(View view, View recoveredView, Sign sign);
+  Recovery(View view, uint32_t nonce, Sign sign);
 
   bool  isSet();
   Sign getSign();
@@ -31,12 +31,12 @@ class Recovery {
   std::string prettyPrint();
   std::string toString();
 
-  bool wellFormedInit();
-  bool wellFormedNv();
-  bool wellFormedPrep(unsigned int qsize);
-  bool wellFormed(unsigned int qsize);
-  View getCView();
-  Hash getCHash();
+  // bool wellFormedInit();
+  // bool wellFormedNv();
+  // bool wellFormedPrep(unsigned int qsize);
+  // bool wellFormed(unsigned int qsize);
+  // View getCView();
+  // Hash getCHash();
 };
 
 
