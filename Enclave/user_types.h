@@ -254,11 +254,13 @@ typedef struct _opaccum_t
 typedef struct _recovery_t {
   View view;
   uint32_t nonce;
+  signt_t sign;
 } recovery_t;
 
 typedef struct _wish_t {
   View  view;
   View recoverdView;
+  signt_t sign;
 } wish_t;
 
 
