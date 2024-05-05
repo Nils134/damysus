@@ -2,7 +2,7 @@
 #define WISH_H
 
 
-#include "Signs.h"
+#include "Sign.h"
 
 #include "salticidae/stream.h"
 
@@ -30,12 +30,12 @@ class Wish {
   std::string prettyPrint();
   std::string toString();
 
-  bool wellFormedInit();
-  bool wellFormedNv();
-  bool wellFormedPrep(unsigned int qsize);
-  bool wellFormed(unsigned int qsize);
-  View getCView();
-  Hash getCHash();
+  // bool wellFormedInit();
+  // bool wellFormedNv();
+  // bool wellFormedPrep(unsigned int qsize);
+  // bool wellFormed(unsigned int qsize);
+  // View getCView();
+  // Hash getCHash();
 };
 
 
