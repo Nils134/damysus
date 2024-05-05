@@ -3554,6 +3554,9 @@ void Handler::prepareRBF(){
       if (acc.getView() % 10 == 0) {//decide quorum later
         Wish wishReq = callTEEWishRBF();
         if (DEBUG1) std::cout << KBLU << nfo() << "creating wish message for view=" << this->view << ":" << wishReq.prettyPrint() << KNRM << std::endl;
+        MsgWishRBF msgWish();
+        Peers recipients = remove_from_peers(this->myid);
+        sendMsgWishRBF(msgWish,recipients);
       }
       if (justPrep.isSet()) {
         if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.prettyPrint() << KNRM << std::endl;

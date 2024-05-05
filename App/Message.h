@@ -443,37 +443,32 @@ struct MsgPreCommitRBF {
 struct MsgWishRBF {
   static const uint8_t opcode = HDR_WISH_RBF;
   salticidae::DataStream serialized;
-  RData data;
-  Signs signs;
-  MsgWishRBF(const RData &data, const Signs &signs) : data(data),signs(signs) { serialized << data << signs; }
-  MsgWishRBF(salticidae::DataStream &&s) { s >> data >> signs; }
-  bool operator<(const MsgWishRBF& s) const {
-    if (signs < s.signs) { return true; }
-    return false;
-  }
+  View view;
+  View recoveredView;
+  Sign sign;
+  MsgWishRBF(const View &view, const View &recoveredView, const Sign &sign) : view(view), recoveredView(recoveredView), sign(sign) { serialized << view << recoveredView << sign; }
+  MsgWishRBF(salticidae::DataStream &&s) { s >> view >> recoveredView >> sign; }
   std::string prettyPrint() {
-    return "WISH-RBF[" + data.prettyPrint() + "," + signs.prettyPrint() + "]";
+    return "WISH-RBF[" + std::to_string(view) + "," + std::to_string(recoveredView) + "," + sign.prettyPrint() + "]";
   }
-  unsigned int sizeMsg() { return (sizeof(RData) + sizeof(Signs)); }
-  void serialize(salticidae::DataStream &s) const { s << data << signs; }
+  unsigned int sizeMsg() { return ((sizeof(View)*2) + sizeof(Sign)); }
+  void serialize(salticidae::DataStream &s) const { s << view << recoveredView << sign; }
 };
 
 struct MsgRecoverRBF {
   static const uint8_t opcode = HDR_RECOVERY_RBF;
   salticidae::DataStream serialized;
-  RData data;
-  Signs signs;
-  MsgRecoverRBF(const RData &data, const Signs &signs) : data(data),signs(signs) { serialized << data << signs; }
-  MsgRecoverRBF(salticidae::DataStream &&s) { s >> data >> signs; }
-  bool operator<(const MsgRecoverRBF& s) const {
-    if (signs < s.signs) { return true; }
-    return false;
-  }
+  View view;
+  uint32_t nonce;
+  Sign sign;
+  MsgRecoverRBF(const View &view, const uint32_t &nonce, const Sign &sign) : view(view),nonce(nonce), sign(sign) { serialized << view << nonce << sign; }
+  MsgRecoverRBF(salticidae::DataStream &&s) { s >> view >> nonce >> sign; }
+
   std::string prettyPrint() {
-    return "RECOVER-RBF[" + data.prettyPrint() + "," + signs.prettyPrint() + "]";
+    return "RECOVER-RBF[" +  std::to_string(view) + "," + std::to_string(nonce) + "," + sign.prettyPrint() + "]";
   }
-  unsigned int sizeMsg() { return (sizeof(RData) + sizeof(Signs)); }
-  void serialize(salticidae::DataStream &s) const { s << data << signs; }
+  unsigned int sizeMsg() { return ((sizeof(View)*2) + sizeof(Sign)); }
+  void serialize(salticidae::DataStream &s) const { s << view << nonce << sign; }
 };
 
 
