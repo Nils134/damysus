@@ -697,6 +697,22 @@ std::set<MsgNewViewRBF> Log::getNewViewRBF(View view, unsigned int n) {
   return ret;
 }
 
+unsigned int Log::storeWishRBF(MsgWishRBF msg){
+
+}
+  
+std::set<MsgWishRBF> Log::getWishRBF(View view, unsigned int n) {
+
+}
+
+unsigned int Log::storeRecoveryRBF(MsgRecoverRBF msg) {
+
+}
+  
+std::set<MsgRecoverRBF> Log::getRecoveryRBF(View view, unsigned int n) {
+  
+}
+
 
 unsigned int Log::storePrepRBF(MsgPrepareRBF msg) {
   RData data = msg.data;
