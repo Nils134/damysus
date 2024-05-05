@@ -6,7 +6,7 @@ hash_t RBFpreph = newHash(); // hash of the last prepared block
 View   RBFprepv = 0;             // preph's view
 View   RBFview  = 0;             // current view
 Phase1 RBFphase = PH1_NEWVIEW;   // current phase
-float nonce = 0;                 // nonce to uniquely identify TEEs with the same keypair
+uint32_t nonce = 0;                 // nonce to uniquely identify TEEs with the same keypair
 
 
 
@@ -118,7 +118,7 @@ sgx_status_t RBF_TEEaccum(onejusts_t *js, accum_t *res) {
   return status;
 }
 
-//TODO: log the MC values, and the message in runtime memory
+
 sgx_status_t RBF_TEEaccumSp(just_t *just, accum_t *res) {
   sgx_status_t status = SGX_SUCCESS;
 
@@ -213,9 +213,11 @@ sgx_status_t RBF_TEEleaderCreateQuorum() {
 
 //create method to reset view and phase to earlier version or 0, 
 //simulating a rollback
-sgx_status_t RBF_TEEattemptrollback(View *v) {
+sgx_status_t RBF_TEEattemptrollback(just_t *just) {
   sgx_status_t status = SGX_SUCCESS;
   // reset values and create new nonce to simulate new TEE
+  nonce = 0;
+  RBFview = just->rdata.propv;
   return status;
 }
 

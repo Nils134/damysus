@@ -44,7 +44,7 @@ enclave {
         public sgx_status_t RBF_TEEleaderWish();
         public sgx_status_t RBF_TEEleaderCreateQuorum();
         
-        public sgx_status_t RBF_TEEattemptrollback([in] View *v);
+        public sgx_status_t RBF_TEEattemptrollback([in] just_t *just);
 
 
         /* Free */

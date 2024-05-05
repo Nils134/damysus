@@ -3532,8 +3532,12 @@ void Handler::prepareRBF(){
       // New block
       Block block = createNewBlock(acc.getPreph());
 
+
       // This one we'll store, and wait until we have this->qsize of them
       Just justPrep = callTEEprepareRBF(block.hash(),acc);
+      MsgNewViewRBF start = *newviews.begin();
+      
+      // callTEEattemptrollback(Just(start.data, start.sign));
       if (justPrep.isSet()) {
         if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.prettyPrint() << KNRM << std::endl;
         if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.hash().toString() << KNRM << std::endl;
@@ -3759,6 +3763,21 @@ Just Handler::callTEEstoreRBF(Just j){
   return just;
 }
 
+void Handler::callTEEattemptrollback(Just j){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  just_t jin;
+  setJust(j,&jin);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEattemptrollback(global_eid, &ret, &jin);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEstore(time);
+  stats.addTEEtime(time);
+}
 
 void Handler::handleNewviewRBF(MsgNewViewRBF msg){
   auto start = std::chrono::steady_clock::now();
