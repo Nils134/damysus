@@ -11,8 +11,8 @@ class Recovery {
 
  private:
   bool set = false;
-  View view = 0;
-  uint32_t nonce = 0;
+  View view;
+  uint32_t nonce;
   Sign sign; // signature
 
  public:

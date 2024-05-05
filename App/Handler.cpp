@@ -3544,7 +3544,6 @@ void Handler::prepareRBF(){
 
       // This one we'll store, and wait until we have this->qsize of them
       Just justPrep = callTEEprepareRBF(block.hash(),acc);
-      MsgNewViewRBF start = *newviews.begin();
       
       // callTEEattemptrollback(Just(start.data, start.sign));
       if (justPrep.isSet()) {
@@ -3794,7 +3793,7 @@ Wish Handler::callTEEWishRBF(){
   wish_t wout;
   sgx_status_t ret;
   sgx_status_t status = RBF_TEEwish(global_eid, &ret, &wout);
-  Just just = getJust(&jout);
+  Wish wish = getWish(&wout);
 #else
   Just just = tr.TEEstore(stats,this->nodes,j);
 #endif
@@ -3802,7 +3801,7 @@ Wish Handler::callTEEWishRBF(){
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
   stats.addTEEstore(time);
   stats.addTEEtime(time);
-  return just;
+  return wish;
 }
 
 Recovery Handler::callTEErecoveryRBF(){
@@ -3811,7 +3810,7 @@ Recovery Handler::callTEErecoveryRBF(){
   recovery_t rout;
   sgx_status_t ret;
   sgx_status_t status = RBF_TEErecovery(global_eid, &ret, &rout);
-  Recovery rec = getJust(&jout);
+  Recovery rec = getRec(&rout);
 #else
   Just just = tr.TEEstore(stats,this->nodes,j);
 #endif
@@ -3829,7 +3828,7 @@ Just Handler::callTEEreceiveTCRBF(Just justTC){
   just_t jin;
   setJust(justTC,&jin);
   sgx_status_t ret;
-  sgx_status_t status = RBF_TEEreceiveTC(global_eid, &ret, &jin, &jout);
+  sgx_status_t status = RBF_TEEstore(global_eid, &ret, &jin, &jout);
   Just just = getJust(&jout);
 #else
   Just just = tr.TEEstore(stats,this->nodes,j);
@@ -3848,7 +3847,7 @@ Just Handler::callTEEreceiveQCRBF(Just justQC){
   just_t jin;
   setJust(justQC,&jin);
   sgx_status_t ret;
-  sgx_status_t status = RBF_TEEreceiveQC(global_eid, &ret, &jin, &jout);
+  sgx_status_t status = RBF_TEEstore(global_eid, &ret, &jin, &jout);
   Just just = getJust(&jout);
 #else
   Just just = tr.TEEstore(stats,this->nodes,j);

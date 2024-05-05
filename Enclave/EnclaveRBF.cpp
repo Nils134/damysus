@@ -156,57 +156,69 @@ sgx_status_t RBF_TEEaccumSp(just_t *just, accum_t *res) {
 // Every node functions
 
 //Allow for a recovery of the SGX enclave
-sgx_status_t RBF_TEErecovery(accum_t *acc, just_t *res) {
+sgx_status_t RBF_TEErecovery(recovery_t *res) {
   //set values to maximum value, if a quorum is reached.
   //ocall_print("TEEstore...");
   sgx_status_t status = SGX_SUCCESS;
+  bool set = true;
   //send message recovery(nonce, sign) to all leaders view, ..., view+f+u+1 of suspected view
-
+  res->set = 1;
+  res->view = RBFview;
+  res->nonce = nonce;
+  std::string text = std::to_string(set) +  std::to_string(RBFview) + std::to_string(nonce);
+  sign_t sign = signString(text);
+  res->sign = sign;
   return status;
 }
 
 //Create Wish function to craft message for all leader within an epoch
-sgx_status_t RBF_TEEwish() {
+sgx_status_t RBF_TEEwish(wish_t *res) {
   sgx_status_t status = SGX_SUCCESS;
+  bool set = true;
   //send message wish(view[self], sign) to all leaders view, ..., view+f+u+1
-
+  res->set = 1;
+  res->view = RBFview;
+  res->recoveredView = RBFprepv;
+  std::string text = std::to_string(set) +  std::to_string(RBFview) + std::to_string(RBFprepv);
+  sign_t sign = signString(text);
+  res->sign = sign;
   return status;
 }
 
 //Simulate receiving messages (similar to upon functions)
 
-sgx_status_t RBF_TEEreceiveTC() {
-  sgx_status_t status = SGX_SUCCESS;
-  //send vote to a leader that sends a valid proposed TC
+// sgx_status_t RBF_TEEreceiveTC() {
+//   sgx_status_t status = SGX_SUCCESS;
+//   //send vote to a leader that sends a valid proposed TC
 
-  return status;
-}
+//   return status;
+// }
 
-sgx_status_t RBF_TEEreceiveQC() {
-  sgx_status_t status = SGX_SUCCESS;
-  //send vote to a leader that sends a valid proposed QC
+// sgx_status_t RBF_TEEreceiveQC() {
+//   sgx_status_t status = SGX_SUCCESS;
+//   //send vote to a leader that sends a valid proposed QC
 
-  return status;
-}
+//   return status;
+// }
 
 
 // LEADER FUNCTIONS
 
 //Collect wish and recover messages and create a TC
-sgx_status_t RBF_TEEleaderWish() {
-  sgx_status_t status = SGX_SUCCESS;
-  //receive bunch of wish and recover messages, combine into TC and send to all TEEs
+// sgx_status_t RBF_TEEleaderWish() {
+//   sgx_status_t status = SGX_SUCCESS;
+//   //receive bunch of wish and recover messages, combine into TC and send to all TEEs
 
-  return status;
-}
+//   return status;
+// }
 
-//Collect TC votes and create a quorum for next epoch
-sgx_status_t RBF_TEEleaderCreateQuorum() {
-  sgx_status_t status = SGX_SUCCESS;
-  //receive TC votes and send QC for next epoch to all TEEs
+// //Collect TC votes and create a quorum for next epoch
+// sgx_status_t RBF_TEEleaderCreateQuorum() {
+//   sgx_status_t status = SGX_SUCCESS;
+//   //receive TC votes and send QC for next epoch to all TEEs
 
-  return status;
-}
+//   return status;
+// }
 
 
 //Rollback functionality 

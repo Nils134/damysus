@@ -11,8 +11,8 @@ class Wish {
 
  private:
   bool set = false;
-  View view = 0;
-  View recoveredView = 0;
+  View view;
+  View recoveredView;
   Sign sign; // signature
 
  public:
