@@ -824,6 +824,15 @@ bool Handler::amLeaderOf(View v) { return (this->myid == getLeaderOf(v)); }
 
 bool Handler::amCurrentLeader() { return (this->myid == getCurrentLeader()); }
 
+bool Handler::amEpochLeaderOf(View v) {
+  return false;
+}
+
+bool Handler::amCurrentEpochLeader() {
+  return amEpochLeaderOf(this->view);
+}
+
+
 
 /*void Handler::sendData(unsigned int size, char *data, std::set<PID> recipients) {
   if (DEBUG) { std::cout << KBLU << nfo() << "sending message to " << recipients.size() << " nodes" << KNRM << std::endl; }
@@ -3992,39 +4001,37 @@ void Handler::handleWishRBF(MsgWishRBF msg) {
   if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
   View v = msg.view;
   if (v == this->view) {
-    if (amLeaderOf(v)) {
+    if (amEpochLeaderOf(v)) {
       // Beginning of decide phase, we store messages until we get enough of them to start deciding
-      if (this->log.storePcRBF(msg) == this->qsize) {
+      if (this->log.storeWishRBF(msg) == this->qsize) {
         //Create a TC, fusing the nonces from recovery messages, to achieve a new TC
       }
     } else {
-      // Backups wait for a MsgPreCommitComb message from the leader that contains qsize signatures in the decide phase
+      // Need more messages to form quorum
       
     }
   } else {
     if (DEBUG1) std::cout << KMAG << nfo() << "storing:" << msg.prettyPrint() << KNRM << std::endl;
-    if (v > this->view) { log.storePcRBF(msg); }
+    if (v > this->view) { log.storeWishRBF(msg); }
   }
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
   stats.addTotalHandleTime(time);
-  //TODO: else store the message for later usage
 }
   
 void Handler::handleRecoveryRBF(MsgRecoverRBF msg) {
   //TODO: else store the message for later usage after threshold of wish messages
   auto start = std::chrono::steady_clock::now();
   if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
-  RData data = msg.data;
-  View v = data.getPropv();
+  View v = msg.view;
   if (v == this->view) {
-    if (amLeaderOf(v)) {
+    if (amEpochLeaderOf(v)) {
       // If leading this epoch, store the message for use in a TC creation
       
     }
   } else {
     if (DEBUG1) std::cout << KMAG << nfo() << "storing:" << msg.prettyPrint() << KNRM << std::endl;
-    if (v > this->view) { log.storePcRBF(msg); }
+    if (v > this->view) { log.storeRecoveryRBF(msg); }
   }
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();

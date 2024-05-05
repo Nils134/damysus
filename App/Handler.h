@@ -145,8 +145,14 @@ class Handler {
   // true iff 'myid' is the leader of view 'v'
   bool amLeaderOf(View v);
 
-  // ture iff 'myid' is the leader of the current view
+  // true iff 'myid' is the leader of the current view
   bool amCurrentLeader();
+
+  // true iff 'myid' is the leader of view 'v'
+  bool amEpochLeaderOf(View v);
+
+  // true iff 'myid' is the leader of a view of the epoch of the current view
+  bool amCurrentEpochLeader();
 
   // used to print debugging info
   std::string nfo();
