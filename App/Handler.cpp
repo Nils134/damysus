@@ -3988,13 +3988,47 @@ void Handler::handlePreCommitRBF(MsgPreCommitRBF msg){
 
 void Handler::handleWishRBF(MsgWishRBF msg) {
   //TODO: what happens upon threshold of messages
-
+  auto start = std::chrono::steady_clock::now();
+  if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
+  View v = msg.view;
+  if (v == this->view) {
+    if (amLeaderOf(v)) {
+      // Beginning of decide phase, we store messages until we get enough of them to start deciding
+      if (this->log.storePcRBF(msg) == this->qsize) {
+        //Create a TC, fusing the nonces from recovery messages, to achieve a new TC
+      }
+    } else {
+      // Backups wait for a MsgPreCommitComb message from the leader that contains qsize signatures in the decide phase
+      
+    }
+  } else {
+    if (DEBUG1) std::cout << KMAG << nfo() << "storing:" << msg.prettyPrint() << KNRM << std::endl;
+    if (v > this->view) { log.storePcRBF(msg); }
+  }
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTotalHandleTime(time);
   //TODO: else store the message for later usage
 }
   
 void Handler::handleRecoveryRBF(MsgRecoverRBF msg) {
   //TODO: else store the message for later usage after threshold of wish messages
-
+  auto start = std::chrono::steady_clock::now();
+  if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
+  RData data = msg.data;
+  View v = data.getPropv();
+  if (v == this->view) {
+    if (amLeaderOf(v)) {
+      // If leading this epoch, store the message for use in a TC creation
+      
+    }
+  } else {
+    if (DEBUG1) std::cout << KMAG << nfo() << "storing:" << msg.prettyPrint() << KNRM << std::endl;
+    if (v > this->view) { log.storePcRBF(msg); }
+  }
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTotalHandleTime(time);
 }
 
 void Handler::handle_newviewrbf(MsgNewViewRBF msg, const PeerNet::conn_t &conn) {
@@ -4018,11 +4052,13 @@ void Handler::handle_precommitrbf(MsgPreCommitRBF msg, const PeerNet::conn_t &co
 }
 
 void Handler::handle_wishrbf(MsgWishRBF msg, const PeerNet::conn_t &conn){
-
+  if (DEBUGT) printNowTime("handling MsgWishRBF");
+  handleWishRBF(msg);
 }
 
 void Handler::handle_recoveryrbf(MsgRecoverRBF msg, const PeerNet::conn_t &conn){
-  
+  if (DEBUGT) printNowTime("handling MsgRecoveryRBF");
+  handleRecoveryRBF(msg);
 }
 
 
