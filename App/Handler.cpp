@@ -987,6 +987,12 @@ void Handler::sendMsgPreCommitRBF(MsgPreCommitRBF msg, Peers recipients) {
   if (DEBUGT) printNowTime("sending MsgPreCommitRBF");
 }
 
+void Handler::sendMsgWishRBF(MsgWishRBF msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgPreCommitRBF");
+}
+
 
 void Handler::sendMsgNewViewFree(MsgNewViewFree msg, Peers recipients) {
   if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
@@ -3545,7 +3551,10 @@ void Handler::prepareRBF(){
       // This one we'll store, and wait until we have this->qsize of them
       Just justPrep = callTEEprepareRBF(block.hash(),acc);
       
-      // callTEEattemptrollback(Just(start.data, start.sign));
+      if (acc.getView() % 10 == 0) {//decide quorum later
+        Wish wishReq = callTEEWishRBF();
+        if (DEBUG1) std::cout << KBLU << nfo() << "creating wish message for view=" << this->view << ":" << wishReq.prettyPrint() << KNRM << std::endl;
+      }
       if (justPrep.isSet()) {
         if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.prettyPrint() << KNRM << std::endl;
         if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.hash().toString() << KNRM << std::endl;
@@ -3616,6 +3625,10 @@ void Handler::decideRBF(RData data) {
 
 // For backups to respond to correct MsgLdrPrepareRBF messages received from leaders
 void Handler::respondToLdrPrepareRBF(Block block, Accum acc){
+  if (acc.getView() % 10 == 0) {//decide quorum later
+    Wish wishReq = callTEEWishRBF();
+    if (DEBUG1) std::cout << KBLU << nfo() << "creating wish message for view=" << this->view << ":" << wishReq.prettyPrint() << KNRM << std::endl;
+  }
   Just justPrep = callTEEprepareRBF(block.hash(),acc);
   if (justPrep.isSet()) {
     if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.prettyPrint() << KNRM << std::endl;

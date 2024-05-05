@@ -440,6 +440,42 @@ struct MsgPreCommitRBF {
   void serialize(salticidae::DataStream &s) const { s << data << signs; }
 };
 
+struct MsgWishRBF {
+  static const uint8_t opcode = HDR_WISH_RBF;
+  salticidae::DataStream serialized;
+  RData data;
+  Signs signs;
+  MsgWishRBF(const RData &data, const Signs &signs) : data(data),signs(signs) { serialized << data << signs; }
+  MsgWishRBF(salticidae::DataStream &&s) { s >> data >> signs; }
+  bool operator<(const MsgWishRBF& s) const {
+    if (signs < s.signs) { return true; }
+    return false;
+  }
+  std::string prettyPrint() {
+    return "WISH-RBF[" + data.prettyPrint() + "," + signs.prettyPrint() + "]";
+  }
+  unsigned int sizeMsg() { return (sizeof(RData) + sizeof(Signs)); }
+  void serialize(salticidae::DataStream &s) const { s << data << signs; }
+};
+
+struct MsgRecoverRBF {
+  static const uint8_t opcode = HDR_RECOVERY_RBF;
+  salticidae::DataStream serialized;
+  RData data;
+  Signs signs;
+  MsgRecoverRBF(const RData &data, const Signs &signs) : data(data),signs(signs) { serialized << data << signs; }
+  MsgRecoverRBF(salticidae::DataStream &&s) { s >> data >> signs; }
+  bool operator<(const MsgRecoverRBF& s) const {
+    if (signs < s.signs) { return true; }
+    return false;
+  }
+  std::string prettyPrint() {
+    return "RECOVER-RBF[" + data.prettyPrint() + "," + signs.prettyPrint() + "]";
+  }
+  unsigned int sizeMsg() { return (sizeof(RData) + sizeof(Signs)); }
+  void serialize(salticidae::DataStream &s) const { s << data << signs; }
+};
+
 
 /////////////////////////////////////////////////////
 // Basic version - FREE
