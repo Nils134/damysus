@@ -990,7 +990,13 @@ void Handler::sendMsgPreCommitRBF(MsgPreCommitRBF msg, Peers recipients) {
 void Handler::sendMsgWishRBF(MsgWishRBF msg, Peers recipients) {
   if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
   this->pnet.multicast_msg(msg, getPeerids(recipients));
-  if (DEBUGT) printNowTime("sending MsgPreCommitRBF");
+  if (DEBUGT) printNowTime("sending MsgWishRBF");
+}
+
+void Handler::sendMsgRecoveryRBF(MsgRecoverRBF msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgRecoveryRBF");
 }
 
 
@@ -3554,8 +3560,8 @@ void Handler::prepareRBF(){
       if (acc.getView() % 10 == 0) {//decide quorum later
         Wish wishReq = callTEEWishRBF();
         if (DEBUG1) std::cout << KBLU << nfo() << "creating wish message for view=" << this->view << ":" << wishReq.prettyPrint() << KNRM << std::endl;
-        MsgWishRBF msgWish();
-        Peers recipients = remove_from_peers(this->myid);
+        MsgWishRBF msgWish(wishReq.getView(), wishReq.getRecView(), wishReq.getSign());
+        Peers recipients = remove_from_peers(this->myid); //TODO: only send this to epoch leaders instead of all
         sendMsgWishRBF(msgWish,recipients);
       }
       if (justPrep.isSet()) {

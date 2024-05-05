@@ -30,3 +30,4 @@ think of some way to allow faulty and unresponsive TEEs to occasionally trigger 
 Damysus uses logs to store messages up to quorum size (this->log in Handler.cpp)
     - TODO: add storage functionality and other methods related to Comb for RBF
 
+Create Peers list method that only includes leaders of an epoch 

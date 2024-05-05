@@ -185,6 +185,8 @@ class Handler {
   void sendMsgLdrPrepareRBF(MsgLdrPrepareRBF msg, Peers recipients);
   void sendMsgPrepareRBF(MsgPrepareRBF msg, Peers recipients);
   void sendMsgPreCommitRBF(MsgPreCommitRBF msg, Peers recipients);
+  void sendMsgWishRBF(MsgWishRBF msg, Peers recipients);
+  void sendMsgRecoveryRBF(MsgRecoverRBF msg, Peers recipients);
 
   void sendMsgNewViewComb(MsgNewViewComb msg, Peers recipients);
   void sendMsgLdrPrepareComb(MsgLdrPrepareComb msg, Peers recipients);
