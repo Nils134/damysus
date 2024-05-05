@@ -16,6 +16,8 @@
 #include "VJust.h"
 #include "FVJust.h"
 #include "../Enclave/user_types.h"
+#include "Wish.h"
+#include "Recovery.h"
 
 
 
@@ -406,8 +408,8 @@ class Handler {
   Just callTEEprepareRBF(Hash h, Accum acc);
   Just callTEEstoreRBF(Just j);
 
-  Just callTEEWishRBF();
-  Just callTEErecoveryRBF();
+  Wish callTEEWishRBF();
+  Recovery callTEErecoveryRBF();
   Just callTEEreceiveTCRBF(Just justTC);
   Just callTEEreceiveQCRBF(Just justQC);
 

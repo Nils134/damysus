@@ -317,6 +317,15 @@ void setVotes(Vote<Void,Cert> votes[MAX_NUM_SIGNATURES], votes_t *vs) {
   }
 }
 
+// RBF convert struct to class
+Recovery getRec(recovery_t *r) {
+
+  return Recovery();
+}
+
+Wish getWish(wish_t *w) {
+  return Wish();
+}
 
 
 // loads a Accum from [a]
@@ -3779,12 +3788,12 @@ void Handler::callTEEattemptrollbackRBF(Just j){
   stats.addTEEtime(time);
 }
 
-Just Handler::callTEEWishRBF(){
+Wish Handler::callTEEWishRBF(){
   auto start = std::chrono::steady_clock::now();
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
-  just_t jout;
+  wish_t wout;
   sgx_status_t ret;
-  sgx_status_t status = RBF_TEEwish(global_eid, &ret, &jout);
+  sgx_status_t status = RBF_TEEwish(global_eid, &ret, &wout);
   Just just = getJust(&jout);
 #else
   Just just = tr.TEEstore(stats,this->nodes,j);
@@ -3796,13 +3805,13 @@ Just Handler::callTEEWishRBF(){
   return just;
 }
 
-Just Handler::callTEErecoveryRBF(){
+Recovery Handler::callTEErecoveryRBF(){
   auto start = std::chrono::steady_clock::now();
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
-  just_t jout;
+  recovery_t rout;
   sgx_status_t ret;
-  sgx_status_t status = RBF_TEErecovery(global_eid, &ret, &jout);
-  Just just = getJust(&jout);
+  sgx_status_t status = RBF_TEErecovery(global_eid, &ret, &rout);
+  Recovery rec = getJust(&jout);
 #else
   Just just = tr.TEEstore(stats,this->nodes,j);
 #endif
@@ -3810,7 +3819,7 @@ Just Handler::callTEErecoveryRBF(){
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
   stats.addTEEstore(time);
   stats.addTEEtime(time);
-  return just;
+  return rec;
 }
 
 Just Handler::callTEEreceiveTCRBF(Just justTC){
