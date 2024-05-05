@@ -406,15 +406,15 @@ class Handler {
   Just callTEEprepareRBF(Hash h, Accum acc);
   Just callTEEstoreRBF(Just j);
 
-  Just callTEEWish();
-  Just callTEErecovery();
-  Just callTEEreceiveTC();
-  Just callTEEreceiveQC();
+  Just callTEEWishRBF();
+  Just callTEErecoveryRBF();
+  Just callTEEreceiveTCRBF(Just justTC);
+  Just callTEEreceiveQCRBF(Just justQC);
 
-  Just callTEEleaderWish();
-  Just callTEEleaderQuorum();
+  Just callTEEleaderWishRBF();
+  Just callTEEleaderQuorumRBF();
 
-  void callTEEattemptrollback(Just j);
+  void callTEEattemptrollbackRBF(Just j);
 
   //New TEE methods
   

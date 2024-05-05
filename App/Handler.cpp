@@ -3763,7 +3763,7 @@ Just Handler::callTEEstoreRBF(Just j){
   return just;
 }
 
-void Handler::callTEEattemptrollback(Just j){
+void Handler::callTEEattemptrollbackRBF(Just j){
   auto start = std::chrono::steady_clock::now();
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jin;
@@ -3778,6 +3778,79 @@ void Handler::callTEEattemptrollback(Just j){
   stats.addTEEstore(time);
   stats.addTEEtime(time);
 }
+
+Just Handler::callTEEWishRBF(){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  just_t jout;
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEwish(global_eid, &ret, &jout);
+  Just just = getJust(&jout);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEstore(time);
+  stats.addTEEtime(time);
+  return just;
+}
+
+Just Handler::callTEErecoveryRBF(){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  just_t jout;
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEErecovery(global_eid, &ret, &jout);
+  Just just = getJust(&jout);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEstore(time);
+  stats.addTEEtime(time);
+  return just;
+}
+
+Just Handler::callTEEreceiveTCRBF(Just justTC){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  just_t jout;
+  just_t jin;
+  setJust(justTC,&jin);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEreceiveTC(global_eid, &ret, &jin, &jout);
+  Just just = getJust(&jout);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEstore(time);
+  stats.addTEEtime(time);
+  return just;
+}
+
+Just Handler::callTEEreceiveQCRBF(Just justQC){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  just_t jout;
+  just_t jin;
+  setJust(justQC,&jin);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEreceiveQC(global_eid, &ret, &jin, &jout);
+  Just just = getJust(&jout);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEstore(time);
+  stats.addTEEtime(time);
+  return just;
+}
+
 
 void Handler::handleNewviewRBF(MsgNewViewRBF msg){
   auto start = std::chrono::steady_clock::now();
