@@ -882,6 +882,16 @@ Peers Handler::keep_from_peers(PID id) {
   return ret;
 }
 
+Peers Handler::epoch_peers(View v) {
+  Peers ret;
+  int epochLength = this->qsize;
+  for (Peers::iterator it = this->peers.begin(); it != this->peers.end(); ++it) {
+    Peer peer = *it;
+    if (id == std::get<0>(peer)) { ret.push_back(peer); } //TODO: change to match all leaders within an epoch
+  }
+  return ret;
+}
+
 
 std::vector<salticidae::PeerId> getPeerids(Peers recipients) {
   std::vector<salticidae::PeerId> ret;
@@ -3573,11 +3583,11 @@ void Handler::prepareRBF(){
       // This one we'll store, and wait until we have this->qsize of them
       Just justPrep = callTEEprepareRBF(block.hash(),acc);
       
-      if (acc.getView() % 10 == 0) {//decide quorum later
+      if (acc.getView() % this->qsize == 0) {//decide quorum later
         Wish wishReq = callTEEWishRBF();
         if (DEBUG1) std::cout << KBLU << nfo() << "creating wish message for view=" << this->view << ":" << wishReq.prettyPrint() << KNRM << std::endl;
         MsgWishRBF msgWish(wishReq.getView(), wishReq.getRecView(), wishReq.getSign());
-        Peers recipients = remove_from_peers(this->myid); //TODO: only send this to epoch leaders instead of all
+        Peers recipients = epoch_peers(acc.getView()); //TODO: only send this to epoch leaders instead of all
         sendMsgWishRBF(msgWish,recipients);
       }
       if (justPrep.isSet()) {
@@ -3661,11 +3671,24 @@ void Handler::createQCRBF() {
 
 }
 
+// For backups to respond to TC messages received from leaders
+void Handler::respondToTCRBF(MsgTCRBF msg) {
+  
+}
+
+// For backups to respond to QC messages received from leaders
+void Handler::respondToQCRBF(MsgQCRBF msg){
+  
+}
+
 // For backups to respond to correct MsgLdrPrepareRBF messages received from leaders
 void Handler::respondToLdrPrepareRBF(Block block, Accum acc){
   if (acc.getView() % 10 == 0) {//decide quorum later
     Wish wishReq = callTEEWishRBF();
     if (DEBUG1) std::cout << KBLU << nfo() << "creating wish message for view=" << this->view << ":" << wishReq.prettyPrint() << KNRM << std::endl;
+    MsgWishRBF msgWish(wishReq.getView(), wishReq.getRecView(), wishReq.getSign());
+    Peers recipients = epoch_peers(wishReq.getView());
+    sendMsgWishRBF(msgWish, recipients);
   }
   Just justPrep = callTEEprepareRBF(block.hash(),acc);
   if (justPrep.isSet()) {
@@ -4025,7 +4048,9 @@ void Handler::handleWishRBF(MsgWishRBF msg) {
       // Beginning of decide phase, we store messages until we get enough of them to start deciding
       if (this->log.storeWishRBF(msg) == this->qsize) {
         //Create a TC, fusing the nonces from recovery messages, to achieve a new TC
-        createTC();
+        createTCRBF();
+        if (DEBUG1) std::cout << KBLU << nfo() << "Achieved quorum:" << this->qsize << KNRM << std::endl;
+
       }
     } else {
       // Ignore message

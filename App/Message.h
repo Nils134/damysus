@@ -478,6 +478,13 @@ struct MsgRecoveryRBF {
   void serialize(salticidae::DataStream &s) const { s << view << nonce << sign; }
 };
 
+struct MsgTCRBF {
+
+};
+
+struct MsgQCRBF {
+
+};
 
 /////////////////////////////////////////////////////
 // Basic version - FREE

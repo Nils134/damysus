@@ -260,6 +260,7 @@ class Handler {
 
   Peers remove_from_peers(PID id);
   Peers keep_from_peers(PID id);
+  Peers epoch_peers(View v);
 
   void startNewViewOnTimeout();
 
@@ -412,6 +413,9 @@ class Handler {
   void respondToPrepareRBF(MsgPrepareRBF msg);
   // For backups to respond to MsgPreCommitRBF messages receveid from leaders
   void respondToPreCommitRBF(MsgPreCommitRBF msg);
+
+  void respondToTCRBF(MsgTCRBF msg);
+  void respondToQCRBF(MsgQCRBF msg);
 
   Accum newviews2accRBF(std::set<MsgNewViewRBF> newviews);
 
