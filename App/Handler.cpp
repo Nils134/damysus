@@ -109,6 +109,14 @@ void setSigns(Signs signs, signs_t *s) {
   }
 }
 
+void setSign(Signs sign, sign_t *s) {
+    s->signs[i].set=signs.get(i).isSet();
+    s->signs[i].signer=signs.get(i).getSigner();
+    //for (int k = 0; k < SIGN_LEN; k++) { (s->signs[i].sign)[k] = (signs.get(i).getSign())[k]; }
+    memcpy(s->signs[i].sign,signs.get(i).getSign(),SIGN_LEN);
+  
+}
+
 // stores [auth] in [a]
 void setAuth(Auth auth, auth_t *a) {
   a->id=auth.getId();
@@ -137,7 +145,7 @@ void setWish(Wish wish, wish_t *w) {
   w->set = 1;
   w->view = wish.getView();
   w->recoveredView = wish.getRecView();
-  w->sign = wish.getSign();
+  setSign(wish.getSign(),w->sign );
 }
 
 // stores [just] in [j]

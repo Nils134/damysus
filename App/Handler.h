@@ -428,8 +428,8 @@ class Handler {
 
   Wish callTEEWishRBF();
   Recovery callTEErecoveryRBF();
-  Just callTEEreceiveTCRBF(Just justTC);
-  Just callTEEreceiveQCRBF(Just justQC);
+  TC callTEEreceiveTCRBF(TC justTC);
+  Just callTEEreceiveQCRBF(QC QC); //epoch config complete, should return a TEEprepare that indicates permission
 
   TC callTEEleaderWishRBF(std::set<MsgWishRBF> wishes );
   QC callTEEleaderQuorumRBF();
