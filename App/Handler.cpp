@@ -319,12 +319,17 @@ void setVotes(Vote<Void,Cert> votes[MAX_NUM_SIGNATURES], votes_t *vs) {
 
 // RBF convert struct to class
 Recovery getRec(recovery_t *r) {
-
-  return Recovery();
+  View view = r->view;
+  uint32_t nonce = r->nonce;
+  Sign sign(r->sign.set, r->sign.signer, r->sign.sign);
+  return Recovery(view, nonce, sign);
 }
 
 Wish getWish(wish_t *w) {
-  return Wish();
+  View view = w->view;
+  View recoveredView = w->recoveredView;
+  Sign sign(w->sign.set, w->sign.signer, w->sign.sign);
+  return Wish(view, recoveredView, sign);
 }
 
 
@@ -562,6 +567,8 @@ const uint8_t MsgNewViewRBF::opcode;
 const uint8_t MsgLdrPrepareRBF::opcode;
 const uint8_t MsgPrepareRBF::opcode;
 const uint8_t MsgPreCommitRBF::opcode;
+const uint8_t MsgWishRBF::opcode;
+const uint8_t MsgRecoveryRBF::opcode;
 #endif
 
 const uint8_t MsgTransaction::opcode;
