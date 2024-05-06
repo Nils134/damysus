@@ -448,6 +448,10 @@ struct MsgWishRBF {
   Sign sign;
   MsgWishRBF(const View &view, const View &recoveredView, const Sign &sign) : view(view), recoveredView(recoveredView), sign(sign) { serialized << view << recoveredView << sign; }
   MsgWishRBF(salticidae::DataStream &&s) { s >> view >> recoveredView >> sign; }
+  bool operator<(const MsgWishRBF& s) const {
+    if (sign < s.sign) { return true; }
+    return false;
+  }
   std::string prettyPrint() {
     return "WISH-RBF[" + std::to_string(view) + "," + std::to_string(recoveredView) + "," + sign.prettyPrint() + "]";
   }
@@ -463,7 +467,10 @@ struct MsgRecoveryRBF {
   Sign sign;
   MsgRecoveryRBF(const View &view, const uint32_t &nonce, const Sign &sign) : view(view),nonce(nonce), sign(sign) { serialized << view << nonce << sign; }
   MsgRecoveryRBF(salticidae::DataStream &&s) { s >> view >> nonce >> sign; }
-
+  bool operator<(const MsgRecoveryRBF& s) const {
+    if (sign < s.sign) { return true; }
+    return false;
+  }
   std::string prettyPrint() {
     return "RECOVER-RBF[" +  std::to_string(view) + "," + std::to_string(nonce) + "," + sign.prettyPrint() + "]";
   }
