@@ -740,7 +740,16 @@ unsigned int Log::storeWishRBF(MsgWishRBF msg){
 }
   
 std::set<MsgWishRBF> Log::getWishRBF(View view, unsigned int n) {
-
+  std::set<MsgWishRBF> ret;
+  std::map<View,std::set<MsgWishRBF>>::iterator it1 = this->wishRBF.find(view);
+  if (it1 != this->wishRBF.end()) { // there is already an entry for this view
+    std::set<MsgWishRBF> msgs = it1->second;
+    for (std::set<MsgWishRBF>::iterator it=msgs.begin(); ret.size() < n && it!=msgs.end(); ++it) {
+      MsgWishRBF msg = (MsgWishRBF)*it;
+      ret.insert(msg);
+    }
+  }
+  return ret;
 }
 
 unsigned int Log::storeRecoveryRBF(MsgRecoveryRBF msg) {
@@ -768,7 +777,16 @@ unsigned int Log::storeRecoveryRBF(MsgRecoveryRBF msg) {
 }
   
 std::set<MsgRecoveryRBF> Log::getRecoveryRBF(View view, unsigned int n) {
-  
+  std::set<MsgRecoveryRBF> ret;
+  std::map<View,std::set<MsgRecoveryRBF>>::iterator it1 = this->recoveryRBF.find(view);
+  if (it1 != this->recoveryRBF.end()) { // there is already an entry for this view
+    std::set<MsgRecoveryRBF> msgs = it1->second;
+    for (std::set<MsgRecoveryRBF>::iterator it=msgs.begin(); ret.size() < n && it!=msgs.end(); ++it) {
+      MsgRecoveryRBF msg = (MsgRecoveryRBF)*it;
+      ret.insert(msg);
+    }
+  }
+  return ret;
 }
 
 
