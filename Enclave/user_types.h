@@ -265,5 +265,11 @@ typedef struct _wish_t {
   sign_t sign;
 } wish_t;
 
+typedef struct _tc_t {
+  bool set;
+  View  view;
+  signs_t signs;
+} wish_t;
+
 
 #endif

@@ -430,8 +430,8 @@ class Handler {
   Just callTEEreceiveTCRBF(Just justTC);
   Just callTEEreceiveQCRBF(Just justQC);
 
-  Just callTEEleaderWishRBF();
-  Just callTEEleaderQuorumRBF();
+  TC callTEEleaderWishRBF();
+  QC callTEEleaderQuorumRBF();
 
   void callTEEattemptrollbackRBF(Just j);
 

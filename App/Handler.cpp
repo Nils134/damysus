@@ -3598,14 +3598,14 @@ void Handler::prepareRBF(){
       // This one we'll store, and wait until we have this->qsize of them
       Just justPrep = callTEEprepareRBF(block.hash(),acc);
       
-      if (justPrep.getRData().getJustv() % this->qsize == this->qsize-1) {//Should only advance to next epoch after QC
+      if (!justPrep.isSet() && justPrep.getRData().getJustv() % this->qsize == this->qsize-1) {//Should only advance to next epoch after QC
         Wish wishReq = callTEEWishRBF();
         if (DEBUG1) std::cout << KBLU << nfo() << "creating wish message leader for view=" << wishReq.prettyPrint() << KNRM << std::endl;
         MsgWishRBF msgWish(wishReq.getView(), wishReq.getRecView(), wishReq.getSign());
         Peers recipients = remove_from_peers(this->myid); //TODO: only send this to epoch leaders instead of all
         sendMsgWishRBF(msgWish,recipients);
       }
-      if (justPrep.isSet()) {
+      if (justPrep.isSet()) {//non epoch 
         if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.prettyPrint() << KNRM << std::endl;
         if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.hash().toString() << KNRM << std::endl;
         this->blocks[this->view]=block;
@@ -3677,12 +3677,13 @@ void Handler::decideRBF(RData data) {
 // After a sufficient amount of Wish messages, create a TC with the collected nonces which other TEEs can accept
 // Send to all participants
 void Handler::createTCRBF() {
-
+  callTEEleaderWishRBF();
+  MsgTCRBF msg;
 }
 
 // After a sufficient amount of TC confirmations, create a QC with the collected nonces
 // Send to all participants
-void Handler::createQCRBF() {
+void Handler::createQCRBF(MsgQCRBF msg) {
 
 }
 
@@ -3700,7 +3701,7 @@ void Handler::respondToQCRBF(MsgQCRBF msg){
 void Handler::respondToLdrPrepareRBF(Block block, Accum acc){
   
   Just justPrep = callTEEprepareRBF(block.hash(),acc);
-  if (justPrep.getRData().getJustv() % this->qsize == this->qsize-1) {//decide quorum later
+  if (!justPrep.isSet() && justPrep.getRData().getJustv() % this->qsize == this->qsize-1) {//decide quorum later
     if (DEBUG1) std::cout << KBLU << nfo() <<  " accgetView for backup Wish is" <<justPrep.getRData().getJustv()  << KNRM << std::endl;
     Wish wishReq = callTEEWishRBF();
     if (DEBUG1) std::cout << KBLU << nfo() << "creating backup wish message for view=" << this->view << ":" << wishReq.prettyPrint() << KNRM << std::endl;
@@ -4067,7 +4068,7 @@ void Handler::handleWishRBF(MsgWishRBF msg) {
       if (this->log.storeWishRBF(msg) == this->qsize) {
         //Create a TC, fusing the nonces from recovery messages, to achieve a new TC
         createTCRBF();
-        if (DEBUG3) std::cout << KBLU << nfo() << "Achieved quorum:" << this->qsize << KNRM << std::endl;
+        if (DEBUG1) std::cout << KBLU << nfo() << "Achieved quorum:" << this->qsize << KNRM << std::endl;
 
       }
     } else {

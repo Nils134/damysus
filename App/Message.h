@@ -479,11 +479,41 @@ struct MsgRecoveryRBF {
 };
 
 struct MsgTCRBF {
-
+  static const uint8_t opcode = HDR_TC_RBF;
+  salticidae::DataStream serialized;
+  View view;
+  uint32_t nonce;
+  Signs signs;
+  MsgTCRBF(const View &view, uint32_t nonce, const Signs &signs) : view(view), nonce(nonce),signs(signs) { serialized << view  << nonce << signs; }
+  MsgTCRBF(salticidae::DataStream &&s) { s >> view >> nonce>> >> signs; }
+  bool operator<(const MsgTCRBF& s) const {
+    if (signs < s.signs) { return true; }
+    return false;
+  }
+  std::string prettyPrint() {
+    return "TC-RBF[" + data.prettyPrint() + "," + signs.prettyPrint() + "]";
+  }
+  unsigned int sizeMsg() { return (sizeof(View) + sizeof(uint32_t)  + sizeof(Signs)); }
+  void serialize(salticidae::DataStream &s) const { s << view << nonce << signs; }
 };
 
 struct MsgQCRBF {
-
+  static const uint8_t opcode = HDR_QC_RBF;
+  salticidae::DataStream serialized;
+  View view;
+  uint32_t nonce;
+  Signs signs;
+  MsgQCRBF(const View &view, uint32_t nonce, const Signs &signs) : view(view), nonce(nonce),signs(signs) { serialized << view  << nonce << signs; }
+  MsgQCRBF(salticidae::DataStream &&s) { s >> view >> nonce>> >> signs; }
+  bool operator<(const MsgQCRBF& s) const {
+    if (signs < s.signs) { return true; }
+    return false;
+  }
+  std::string prettyPrint() {
+    return "QC-RBF[" + data.prettyPrint() + "," + signs.prettyPrint() + "]";
+  }
+  unsigned int sizeMsg() { return (sizeof(View) + sizeof(uint32_t) + sizeof(Signs)); }
+  void serialize(salticidae::DataStream &s) const { s << view << nonce << signs; }
 };
 
 /////////////////////////////////////////////////////
