@@ -59,8 +59,8 @@ typedef uint8_t HEADER;
 #define HDR_PREPARE_LDR_RBF 0x37
 #define HDR_PREPARE_RBF     0x38
 #define HDR_PRECOMMIT_RBF   0x39
-#define HDR_WISH_RBF     0x40
-#define HDR_RECOVERY_RBF   0x41
+#define HDR_WISH_RBF        0x40
+#define HDR_RECOVERY_RBF    0x41
 
 
 typedef uint8_t Phase1;
