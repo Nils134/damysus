@@ -18,7 +18,8 @@
 #include "../Enclave/user_types.h"
 #include "Wish.h"
 #include "Recovery.h"
-
+#include "TC.h"
+#include "QC.h"
 
 
 // ------------------------------------
@@ -430,7 +431,7 @@ class Handler {
   Just callTEEreceiveTCRBF(Just justTC);
   Just callTEEreceiveQCRBF(Just justQC);
 
-  TC callTEEleaderWishRBF();
+  TC callTEEleaderWishRBF(std::set<MsgWishRBF> wishes );
   QC callTEEleaderQuorumRBF();
 
   void callTEEattemptrollbackRBF(Just j);

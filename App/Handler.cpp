@@ -133,6 +133,13 @@ void setJust(Just just, just_t *j) {
   setSigns(just.getSigns(),&(j->signs));
 }
 
+void setWish(Wish wish, wish_t *w) {
+  w->set = 1;
+  w->view = wish.getView();
+  w->recoveredView = wish.getRecView();
+  w->sign = wish.getSign();
+}
+
 // stores [just] in [j]
 void setOneJust(Just just, onejust_t *j) {
   // ------ SET ------
@@ -330,6 +337,18 @@ Wish getWish(wish_t *w) {
   View recoveredView = w->recoveredView;
   Sign sign(w->sign.set, w->sign.signer, w->sign.sign);
   return Wish(view, recoveredView, sign);
+}
+
+TC getTC(tc_t *t) {
+  View view = t->view;
+  Signs signs(t->signs);
+  return TC(view, signs);
+}
+
+QC getQC(qc_t *t) {
+  View view = w->view;
+  Signs signs();
+  return QC(view, signs);
 }
 
 
@@ -3677,7 +3696,8 @@ void Handler::decideRBF(RData data) {
 // After a sufficient amount of Wish messages, create a TC with the collected nonces which other TEEs can accept
 // Send to all participants
 void Handler::createTCRBF() {
-  callTEEleaderWishRBF();
+  std::set<MsgWishRBF> wishes = this->log.getWishRBF(this->view, this->qsize);
+  callTEEleaderWishRBF(wishes);
   MsgTCRBF msg;
 }
 
@@ -3913,7 +3933,7 @@ Recovery Handler::callTEErecoveryRBF(){
   return rec;
 }
 
-Just Handler::callTEEreceiveTCRBF(Just justTC){
+TC Handler::callTEEreceiveTCRBF(TC justTC){//TODO: change 
   auto start = std::chrono::steady_clock::now();
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
@@ -3932,7 +3952,7 @@ Just Handler::callTEEreceiveTCRBF(Just justTC){
   return just;
 }
 
-Just Handler::callTEEreceiveQCRBF(Just justQC){
+Just Handler::callTEEreceiveQCRBF(QC justQC){//TOD: change
   auto start = std::chrono::steady_clock::now();
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
@@ -3949,6 +3969,26 @@ Just Handler::callTEEreceiveQCRBF(Just justQC){
   stats.addTEEstore(time);
   stats.addTEEtime(time);
   return just;
+}
+
+TC callTEEleaderWishRBF(std::set<MsgWishRBF> wishes ) {
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  tc_t tcout;
+  wish_t w;
+  wish = wishes.begin();
+  setWish(*wish,&w);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEleaderWish(global_eid, &ret, &w, &tcout);
+  TC tc = getTC(&tcout);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEstore(time);
+  stats.addTEEtime(time);
+  return tc;
 }
 
 

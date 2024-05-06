@@ -1,5 +1,5 @@
-#ifndef TC_H
-#define TC_H
+#ifndef QC_H
+#define QC_H
 
 
 #include "Signs.h"
@@ -7,16 +7,17 @@
 #include "salticidae/stream.h"
 
 
-class TC {
+class QC {
 
  private:
   bool set = false;
   View view;
-  Sign sign; // signature
+  View recoveredView;
+  Signs signs; // signature
 
  public:
-  TC();
-  TC(View view, Signs signs);
+  QC();
+  QC(View view, Signs signs);
 
   bool  isSet();
   View getView(); 

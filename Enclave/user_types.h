@@ -269,7 +269,13 @@ typedef struct _tc_t {
   bool set;
   View  view;
   signs_t signs;
-} wish_t;
+} tc_t;
 
+
+typedef struct _qc_t {
+  bool set;
+  View  view;
+  signs_t signs;
+} qc_t;
 
 #endif

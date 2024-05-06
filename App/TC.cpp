@@ -3,7 +3,7 @@
 TC::TC() {
   this->set   = false;
   this->view = 0;
-  this->sign s= Signs();
+  this->signs = Signs();
 }
 
 TC::TC(View view, Signs signs) {
