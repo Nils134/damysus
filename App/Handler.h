@@ -395,6 +395,10 @@ class Handler {
   void handleEarlierMessagesRBF();
   void startNewViewRBF();
 
+  // Steps for epoch confirmation
+  void createTCRBF();
+  void createQCRBF();
+
   // For leaders to start preparing
   void prepareRBF();
   // For leaders to start pre-committing

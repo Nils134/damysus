@@ -3648,6 +3648,19 @@ void Handler::decideRBF(RData data) {
   }
 }
 
+
+// After a sufficient amount of Wish messages, create a TC with the collected nonces which other TEEs can accept
+// Send to all participants
+void Handler::createTCRBF() {
+
+}
+
+// After a sufficient amount of TC confirmations, create a QC with the collected nonces
+// Send to all participants
+void Handler::createQCRBF() {
+
+}
+
 // For backups to respond to correct MsgLdrPrepareRBF messages received from leaders
 void Handler::respondToLdrPrepareRBF(Block block, Accum acc){
   if (acc.getView() % 10 == 0) {//decide quorum later
@@ -4012,9 +4025,10 @@ void Handler::handleWishRBF(MsgWishRBF msg) {
       // Beginning of decide phase, we store messages until we get enough of them to start deciding
       if (this->log.storeWishRBF(msg) == this->qsize) {
         //Create a TC, fusing the nonces from recovery messages, to achieve a new TC
+        createTC();
       }
     } else {
-      // Need more messages to form quorum
+      // Ignore message
       
     }
   } else {
@@ -4034,7 +4048,7 @@ void Handler::handleRecoveryRBF(MsgRecoveryRBF msg) {
   if (v == this->view) {
     if (amEpochLeaderOf(v)) {
       // If leading this epoch, store the message for use in a TC creation
-      
+      log.storeRecoveryRBF(msg); 
     }
   } else {
     if (DEBUG1) std::cout << KMAG << nfo() << "storing:" << msg.prettyPrint() << KNRM << std::endl;
