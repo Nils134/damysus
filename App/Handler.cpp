@@ -859,7 +859,7 @@ bool Handler::amEpochLeaderOf(View v, PID id) {
 }
 
 bool Handler::amCurrentEpochLeader() {
-  return amEpochLeaderOf(this->view, myid);
+  return amEpochLeaderOf(this->view, this->myid);
 }
 
 
@@ -905,35 +905,6 @@ Peers Handler::keep_from_peers(PID id) {
   return ret;
 }
 
-//Find all Peers that are leaders within an epoch
-// Peers Handler::epoch_peers(View v) {
-//   Peers ret;
-//   uint peersToSendTo = this->qsize;
-//   bool leaderInEpoch = amEpochLeaderOf(v);
-//   if (leaderInEpoch) {
-//     peersToSendTo--; //need one less peer for an epoch
-//     if (DEBUG3) { std::cout << KBLU << nfo() << " epoch leader"<< KNRM << std::endl;}
-//   }
-//   if (DEBUG3) { std::cout << KBLU << nfo() << peersToSendTo<< KNRM << std::endl;}
-  
-  
-
-//   Peers::iterator it = this->peers.begin();
-//   for (; it != this->peers.end(); ++it) {
-//     Peer peer = *it;
-//     if ((v%this->total == std::get<0>(peer)) || (v%this->total == myid && (std::get<0>(peer) == myid-1 || std::get<0>(peer) == myid+1) ) ){ 
-//       for (int i = 0; i < peersToSendTo; i++) {
-//             if (it == this->peers.end()) {
-//                 it = this->peers.begin(); // Wrap around to the beginning of the list
-//             }
-//             ret.push_back(*it);
-//             ++it;
-//         }
-//       break;
-//       }
-//     }
-//   return ret;
-// }
 
 
 std::vector<salticidae::PeerId> getPeerids(Peers recipients) {
@@ -3627,9 +3598,9 @@ void Handler::prepareRBF(){
       // This one we'll store, and wait until we have this->qsize of them
       Just justPrep = callTEEprepareRBF(block.hash(),acc);
       
-      if (justPrep.getRData().getJustv()% this->qsize == this->qsize-1) {//Should only advance to next epoch after QC
+      if (justPrep.getRData().getJustv() % this->qsize == this->qsize-1) {//Should only advance to next epoch after QC
         Wish wishReq = callTEEWishRBF();
-        if (DEBUG3) std::cout << KBLU << nfo() << "creating wish message leader for view=" << wishReq.prettyPrint() << KNRM << std::endl;
+        if (DEBUG1) std::cout << KBLU << nfo() << "creating wish message leader for view=" << wishReq.prettyPrint() << KNRM << std::endl;
         MsgWishRBF msgWish(wishReq.getView(), wishReq.getRecView(), wishReq.getSign());
         Peers recipients = remove_from_peers(this->myid); //TODO: only send this to epoch leaders instead of all
         sendMsgWishRBF(msgWish,recipients);
@@ -3727,15 +3698,16 @@ void Handler::respondToQCRBF(MsgQCRBF msg){
 
 // For backups to respond to correct MsgLdrPrepareRBF messages received from leaders
 void Handler::respondToLdrPrepareRBF(Block block, Accum acc){
-  if (acc.getView() % this->qsize == this->qsize-1) {//decide quorum later
-    // if (DEBUG1) std::cout << KBLU << nfo() <<  " accgetView for backup Wish is" <<acc.getView() << KNRM << std::endl;
-    // Wish wishReq = callTEEWishRBF();
-    // if (DEBUG1) std::cout << KBLU << nfo() << "creating backup wish message for view=" << this->view << ":" << wishReq.prettyPrint() << KNRM << std::endl;
-    // MsgWishRBF msgWish(wishReq.getView(), wishReq.getRecView(), wishReq.getSign());
-    // Peers recipients = epoch_peers(wishReq.getView());
-    // sendMsgWishRBF(msgWish, recipients);
-  }
+  
   Just justPrep = callTEEprepareRBF(block.hash(),acc);
+  if (justPrep.getRData().getJustv() % this->qsize == this->qsize-1) {//decide quorum later
+    if (DEBUG1) std::cout << KBLU << nfo() <<  " accgetView for backup Wish is" <<justPrep.getRData().getJustv()  << KNRM << std::endl;
+    Wish wishReq = callTEEWishRBF();
+    if (DEBUG1) std::cout << KBLU << nfo() << "creating backup wish message for view=" << this->view << ":" << wishReq.prettyPrint() << KNRM << std::endl;
+    MsgWishRBF msgWish(wishReq.getView(), wishReq.getRecView(), wishReq.getSign());
+    Peers recipients = remove_from_peers(this->myid);
+    sendMsgWishRBF(msgWish, recipients);
+  }
   if (justPrep.isSet()) {
     if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.prettyPrint() << KNRM << std::endl;
     this->blocks[this->view]=block;
@@ -4090,7 +4062,7 @@ void Handler::handleWishRBF(MsgWishRBF msg) {
   if (DEBUG3) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
   View v = msg.view;
   if (v == this->view) {
-    if (amEpochLeaderOf(v, myid)) {
+    if (amEpochLeaderOf(v, this->myid)) {
       // Beginning of decide phase, we store messages until we get enough of them to start deciding
       if (this->log.storeWishRBF(msg) == this->qsize) {
         //Create a TC, fusing the nonces from recovery messages, to achieve a new TC
@@ -4117,7 +4089,7 @@ void Handler::handleRecoveryRBF(MsgRecoveryRBF msg) {
   if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
   View v = msg.view;
   if (v == this->view) {
-    if (amEpochLeaderOf(v, myid)) {
+    if (amEpochLeaderOf(v, this->myid)) {
       // If leading this epoch, store the message for use in a TC creation
       log.storeRecoveryRBF(msg); 
     }

@@ -33,3 +33,5 @@ Damysus uses logs to store messages up to quorum size (this->log in Handler.cpp)
 Create Peers list method that only includes leaders of an epoch 
 
 Fix stats.h for wish and recovery messages
+
+For now: skip nonce messages, create space in TC and QC to hold a nonce, reply with only their nonce to particular TC or QC

@@ -149,7 +149,7 @@ class Handler {
   bool amCurrentLeader();
 
   // true iff 'myid' is the leader of view 'v'
-  bool amEpochLeaderOf(View v);
+  bool amEpochLeaderOf(View v, PID id);
 
   // true iff 'myid' is the leader of a view of the epoch of the current view
   bool amCurrentEpochLeader();
