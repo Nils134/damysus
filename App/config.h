@@ -6,7 +6,7 @@
 
 
 // debug switches
-#define DEBUG   true
+#define DEBUG   false
 #define DEBUG0  false
 #define DEBUG1  true
 #define DEBUG2  false

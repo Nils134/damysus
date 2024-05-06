@@ -886,9 +886,12 @@ Peers Handler::keep_from_peers(PID id) {
 Peers Handler::epoch_peers(View v) {
   Peers ret;
   Peers::iterator it = this->peers.begin();
+  if (DEBUG1) { std::cout << KBLU << nfo() << "epoch leaders " << v << " " << this->total << " " << this->qsize; }
   for (; it != this->peers.end(); ++it) {
     Peer peer = *it;
-    if (v%this->total == std::get<0>(peer)) { ret.push_back(peer); break;}
+    if (v%this->total == std::get<0>(peer)) { 
+      ret.push_back(peer); break;
+      }
   }
 
   if (it != this->peers.end()) {
@@ -902,7 +905,7 @@ Peers Handler::epoch_peers(View v) {
         }
     }
 
-  if (DEBUG) { std::cout << KBLU << nfo() << "epoch leaders";
+  if (DEBUG1) { std::cout << KBLU << nfo() << "epoch leaders";
   for (const auto& tuple : ret) {
         std::cout << std::get<0>(tuple) << " ";
     }
@@ -3703,6 +3706,7 @@ void Handler::respondToQCRBF(MsgQCRBF msg){
 // For backups to respond to correct MsgLdrPrepareRBF messages received from leaders
 void Handler::respondToLdrPrepareRBF(Block block, Accum acc){
   if (acc.getView() % 10 == 0) {//decide quorum later
+    if (DEBUG1) std::cout << KBLU << nfo() <<  " accgetView for backup Wish is" <<acc.getView() << KNRM << std::endl;
     Wish wishReq = callTEEWishRBF();
     if (DEBUG1) std::cout << KBLU << nfo() << "creating wish message for view=" << this->view << ":" << wishReq.prettyPrint() << KNRM << std::endl;
     MsgWishRBF msgWish(wishReq.getView(), wishReq.getRecView(), wishReq.getSign());
