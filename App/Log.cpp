@@ -705,11 +705,11 @@ std::set<MsgWishRBF> Log::getWishRBF(View view, unsigned int n) {
 
 }
 
-unsigned int Log::storeRecoveryRBF(MsgRecoverRBF msg) {
+unsigned int Log::storeRecoveryRBF(MsgRecoveryRBF msg) {
 
 }
   
-std::set<MsgRecoverRBF> Log::getRecoveryRBF(View view, unsigned int n) {
+std::set<MsgRecoveryRBF> Log::getRecoveryRBF(View view, unsigned int n) {
   
 }
 

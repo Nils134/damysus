@@ -1009,7 +1009,7 @@ void Handler::sendMsgWishRBF(MsgWishRBF msg, Peers recipients) {
   if (DEBUGT) printNowTime("sending MsgWishRBF");
 }
 
-void Handler::sendMsgRecoveryRBF(MsgRecoverRBF msg, Peers recipients) {
+void Handler::sendMsgRecoveryRBF(MsgRecoveryRBF msg, Peers recipients) {
   if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
   this->pnet.multicast_msg(msg, getPeerids(recipients));
   if (DEBUGT) printNowTime("sending MsgRecoveryRBF");
@@ -4026,7 +4026,7 @@ void Handler::handleWishRBF(MsgWishRBF msg) {
   stats.addTotalHandleTime(time);
 }
   
-void Handler::handleRecoveryRBF(MsgRecoverRBF msg) {
+void Handler::handleRecoveryRBF(MsgRecoveryRBF msg) {
   //TODO: else store the message for later usage after threshold of wish messages
   auto start = std::chrono::steady_clock::now();
   if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
@@ -4070,7 +4070,7 @@ void Handler::handle_wishrbf(MsgWishRBF msg, const PeerNet::conn_t &conn){
   handleWishRBF(msg);
 }
 
-void Handler::handle_recoveryrbf(MsgRecoverRBF msg, const PeerNet::conn_t &conn){
+void Handler::handle_recoveryrbf(MsgRecoveryRBF msg, const PeerNet::conn_t &conn){
   if (DEBUGT) printNowTime("handling MsgRecoveryRBF");
   handleRecoveryRBF(msg);
 }

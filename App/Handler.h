@@ -193,7 +193,7 @@ class Handler {
   void sendMsgPrepareRBF(MsgPrepareRBF msg, Peers recipients);
   void sendMsgPreCommitRBF(MsgPreCommitRBF msg, Peers recipients);
   void sendMsgWishRBF(MsgWishRBF msg, Peers recipients);
-  void sendMsgRecoveryRBF(MsgRecoverRBF msg, Peers recipients);
+  void sendMsgRecoveryRBF(MsgRecoveryRBF msg, Peers recipients);
 
   void sendMsgNewViewComb(MsgNewViewComb msg, Peers recipients);
   void sendMsgLdrPrepareComb(MsgLdrPrepareComb msg, Peers recipients);
@@ -435,14 +435,14 @@ class Handler {
   void handleLdrPrepareRBF(MsgLdrPrepareRBF msg);
   void handlePreCommitRBF(MsgPreCommitRBF msg);
   void handleWishRBF(MsgWishRBF msg);
-  void handleRecoveryRBF(MsgRecoverRBF msg);
+  void handleRecoveryRBF(MsgRecoveryRBF msg);
 
   void handle_newviewrbf(MsgNewViewRBF msg, const PeerNet::conn_t &conn);
   void handle_preparerbf(MsgPrepareRBF msg, const PeerNet::conn_t &conn);
   void handle_ldrpreparerbf(MsgLdrPrepareRBF msg, const PeerNet::conn_t &conn);
   void handle_precommitrbf(MsgPreCommitRBF msg, const PeerNet::conn_t &conn);
   void handle_wishrbf(MsgWishRBF msg, const PeerNet::conn_t &conn);
-  void handle_recoveryrbf(MsgRecoverRBF msg, const PeerNet::conn_t &conn);
+  void handle_recoveryrbf(MsgRecoveryRBF msg, const PeerNet::conn_t &conn);
 
 
   // ------------------------------------------------------------

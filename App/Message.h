@@ -455,14 +455,14 @@ struct MsgWishRBF {
   void serialize(salticidae::DataStream &s) const { s << view << recoveredView << sign; }
 };
 
-struct MsgRecoverRBF {
+struct MsgRecoveryRBF {
   static const uint8_t opcode = HDR_RECOVERY_RBF;
   salticidae::DataStream serialized;
   View view;
   uint32_t nonce;
   Sign sign;
-  MsgRecoverRBF(const View &view, const uint32_t &nonce, const Sign &sign) : view(view),nonce(nonce), sign(sign) { serialized << view << nonce << sign; }
-  MsgRecoverRBF(salticidae::DataStream &&s) { s >> view >> nonce >> sign; }
+  MsgRecoveryRBF(const View &view, const uint32_t &nonce, const Sign &sign) : view(view),nonce(nonce), sign(sign) { serialized << view << nonce << sign; }
+  MsgRecoveryRBF(salticidae::DataStream &&s) { s >> view >> nonce >> sign; }
 
   std::string prettyPrint() {
     return "RECOVER-RBF[" +  std::to_string(view) + "," + std::to_string(nonce) + "," + sign.prettyPrint() + "]";
