@@ -882,13 +882,32 @@ Peers Handler::keep_from_peers(PID id) {
   return ret;
 }
 
+//Find all Peers that are leaders within an epoch
 Peers Handler::epoch_peers(View v) {
   Peers ret;
-  int epochLength = this->qsize;
-  for (Peers::iterator it = this->peers.begin(); it != this->peers.end(); ++it) {
+  Peers::iterator it = this->peers.begin();
+  for (; it != this->peers.end(); ++it) {
     Peer peer = *it;
-    if (id == std::get<0>(peer)) { ret.push_back(peer); } //TODO: change to match all leaders within an epoch
+    if (v%this->total == std::get<0>(peer)) { ret.push_back(peer); break;}
   }
+
+  if (it != this->peers.end()) {
+        ++it; // Move iterator to the next element
+        for (int i = 0; i < this->qsize; ++i) {
+            if (it == this->peers.end()) {
+                it = this->peers.begin(); // Wrap around to the beginning of the list
+            }
+            ret.push_back(*it);
+            ++it;
+        }
+    }
+
+  if (DEBUG) { std::cout << KBLU << nfo() << "epoch leaders";
+  for (const auto& tuple : ret) {
+        std::cout << std::get<0>(tuple) << " ";
+    }
+    std::cout <<  KNRM <<std::endl;
+   }
   return ret;
 }
 
