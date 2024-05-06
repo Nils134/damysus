@@ -731,6 +731,8 @@ pnet(pec,pconf), cnet(cec,cconf) {
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_ldrpreparerbf, this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_preparerbf,    this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_precommitrbf,  this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_wishrbf,       this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_recoveryrbf,   this, _1, _2));
 #else
   std::cout << KRED << nfo() << "TODO" << KNRM << std::endl;
 #endif
@@ -831,12 +833,33 @@ bool Handler::amLeaderOf(View v) { return (this->myid == getLeaderOf(v)); }
 
 bool Handler::amCurrentLeader() { return (this->myid == getCurrentLeader()); }
 
-bool Handler::amEpochLeaderOf(View v) {
+bool Handler::amEpochLeaderOf(View v, PID id) {
+  if (DEBUG3) { std::cout << KBLU << nfo() << " epoch"<< KNRM << std::endl;}
+  uint epoch = v/this->qsize;
+  uint firstInEpoch = (epoch*this->qsize)%this->total;
+  if (DEBUG3) { std::cout << KBLU << nfo() << " view " << v <<" epoch " << epoch << " , firstInEpoch " << firstInEpoch << KNRM << std::endl;}
+  if (firstInEpoch + this->qsize > this->total) {//loops back to the beginning
+    if (id < (firstInEpoch + this->qsize )%this->total) {
+      if (DEBUG3) { std::cout << KBLU << nfo() << " true" << id << KNRM << std::endl;}
+      return true;
+    }
+    if (id >= firstInEpoch) {
+      if (DEBUG3) { std::cout << KBLU << nfo() << " true" << id << KNRM << std::endl;}
+      return true;
+    }
+  }
+  else { 
+    if (firstInEpoch <= id && id < firstInEpoch + this->qsize ) {
+      if (DEBUG3) { std::cout << KBLU << nfo() << " true" << id << KNRM << std::endl;}
+      return true;
+    }
+  }
+  if (DEBUG3) { std::cout << KBLU << nfo() << " false" << id << KNRM << std::endl;}
   return false;
 }
 
 bool Handler::amCurrentEpochLeader() {
-  return amEpochLeaderOf(this->view);
+  return amEpochLeaderOf(this->view, myid);
 }
 
 
@@ -883,36 +906,34 @@ Peers Handler::keep_from_peers(PID id) {
 }
 
 //Find all Peers that are leaders within an epoch
-Peers Handler::epoch_peers(View v) {
-  Peers ret;
-  Peers::iterator it = this->peers.begin();
-  if (DEBUG1) { std::cout << KBLU << nfo() << "epoch leaders " << v << " " << this->total << " " << this->qsize; }
-  for (; it != this->peers.end(); ++it) {
-    Peer peer = *it;
-    if (v%this->total == std::get<0>(peer)) { 
-      ret.push_back(peer); break;
-      }
-  }
+// Peers Handler::epoch_peers(View v) {
+//   Peers ret;
+//   uint peersToSendTo = this->qsize;
+//   bool leaderInEpoch = amEpochLeaderOf(v);
+//   if (leaderInEpoch) {
+//     peersToSendTo--; //need one less peer for an epoch
+//     if (DEBUG3) { std::cout << KBLU << nfo() << " epoch leader"<< KNRM << std::endl;}
+//   }
+//   if (DEBUG3) { std::cout << KBLU << nfo() << peersToSendTo<< KNRM << std::endl;}
+  
+  
 
-  if (it != this->peers.end()) {
-        ++it; // Move iterator to the next element
-        for (int i = 0; i < this->qsize; ++i) {
-            if (it == this->peers.end()) {
-                it = this->peers.begin(); // Wrap around to the beginning of the list
-            }
-            ret.push_back(*it);
-            ++it;
-        }
-    }
-
-  if (DEBUG1) { std::cout << KBLU << nfo() << "epoch leaders";
-  for (const auto& tuple : ret) {
-        std::cout << std::get<0>(tuple) << " ";
-    }
-    std::cout <<  KNRM <<std::endl;
-   }
-  return ret;
-}
+//   Peers::iterator it = this->peers.begin();
+//   for (; it != this->peers.end(); ++it) {
+//     Peer peer = *it;
+//     if ((v%this->total == std::get<0>(peer)) || (v%this->total == myid && (std::get<0>(peer) == myid-1 || std::get<0>(peer) == myid+1) ) ){ 
+//       for (int i = 0; i < peersToSendTo; i++) {
+//             if (it == this->peers.end()) {
+//                 it = this->peers.begin(); // Wrap around to the beginning of the list
+//             }
+//             ret.push_back(*it);
+//             ++it;
+//         }
+//       break;
+//       }
+//     }
+//   return ret;
+// }
 
 
 std::vector<salticidae::PeerId> getPeerids(Peers recipients) {
@@ -1037,6 +1058,7 @@ void Handler::sendMsgPreCommitRBF(MsgPreCommitRBF msg, Peers recipients) {
 
 void Handler::sendMsgWishRBF(MsgWishRBF msg, Peers recipients) {
   if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  if (DEBUG3) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
   this->pnet.multicast_msg(msg, getPeerids(recipients));
   if (DEBUGT) printNowTime("sending MsgWishRBF");
 }
@@ -3605,11 +3627,11 @@ void Handler::prepareRBF(){
       // This one we'll store, and wait until we have this->qsize of them
       Just justPrep = callTEEprepareRBF(block.hash(),acc);
       
-      if (acc.getView() % this->qsize == 0) {//decide quorum later
+      if (justPrep.getRData().getJustv()% this->qsize == this->qsize-1) {//Should only advance to next epoch after QC
         Wish wishReq = callTEEWishRBF();
-        if (DEBUG1) std::cout << KBLU << nfo() << "creating wish message for view=" << this->view << ":" << wishReq.prettyPrint() << KNRM << std::endl;
+        if (DEBUG3) std::cout << KBLU << nfo() << "creating wish message leader for view=" << wishReq.prettyPrint() << KNRM << std::endl;
         MsgWishRBF msgWish(wishReq.getView(), wishReq.getRecView(), wishReq.getSign());
-        Peers recipients = epoch_peers(acc.getView()); //TODO: only send this to epoch leaders instead of all
+        Peers recipients = remove_from_peers(this->myid); //TODO: only send this to epoch leaders instead of all
         sendMsgWishRBF(msgWish,recipients);
       }
       if (justPrep.isSet()) {
@@ -3705,13 +3727,13 @@ void Handler::respondToQCRBF(MsgQCRBF msg){
 
 // For backups to respond to correct MsgLdrPrepareRBF messages received from leaders
 void Handler::respondToLdrPrepareRBF(Block block, Accum acc){
-  if (acc.getView() % 10 == 0) {//decide quorum later
-    if (DEBUG1) std::cout << KBLU << nfo() <<  " accgetView for backup Wish is" <<acc.getView() << KNRM << std::endl;
-    Wish wishReq = callTEEWishRBF();
-    if (DEBUG1) std::cout << KBLU << nfo() << "creating wish message for view=" << this->view << ":" << wishReq.prettyPrint() << KNRM << std::endl;
-    MsgWishRBF msgWish(wishReq.getView(), wishReq.getRecView(), wishReq.getSign());
-    Peers recipients = epoch_peers(wishReq.getView());
-    sendMsgWishRBF(msgWish, recipients);
+  if (acc.getView() % this->qsize == this->qsize-1) {//decide quorum later
+    // if (DEBUG1) std::cout << KBLU << nfo() <<  " accgetView for backup Wish is" <<acc.getView() << KNRM << std::endl;
+    // Wish wishReq = callTEEWishRBF();
+    // if (DEBUG1) std::cout << KBLU << nfo() << "creating backup wish message for view=" << this->view << ":" << wishReq.prettyPrint() << KNRM << std::endl;
+    // MsgWishRBF msgWish(wishReq.getView(), wishReq.getRecView(), wishReq.getSign());
+    // Peers recipients = epoch_peers(wishReq.getView());
+    // sendMsgWishRBF(msgWish, recipients);
   }
   Just justPrep = callTEEprepareRBF(block.hash(),acc);
   if (justPrep.isSet()) {
@@ -3998,7 +4020,7 @@ void Handler::handlePrepareRBF(MsgPrepareRBF msg){
   stats.addTotalHandleTime(time);
 }
 
-//TODO: check MsgLdrPrepareComb message type valid for RBF
+
 void Handler::handleLdrPrepareRBF(MsgLdrPrepareRBF msg) {
   auto start = std::chrono::steady_clock::now();
   if (DEBUG1) std::cout << KBLU << nfo() << "RBF handling:" << msg.prettyPrint() << KNRM << std::endl;
@@ -4065,14 +4087,15 @@ void Handler::handleWishRBF(MsgWishRBF msg) {
   //TODO: what happens upon threshold of messages
   auto start = std::chrono::steady_clock::now();
   if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
+  if (DEBUG3) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
   View v = msg.view;
   if (v == this->view) {
-    if (amEpochLeaderOf(v)) {
+    if (amEpochLeaderOf(v, myid)) {
       // Beginning of decide phase, we store messages until we get enough of them to start deciding
       if (this->log.storeWishRBF(msg) == this->qsize) {
         //Create a TC, fusing the nonces from recovery messages, to achieve a new TC
         createTCRBF();
-        if (DEBUG1) std::cout << KBLU << nfo() << "Achieved quorum:" << this->qsize << KNRM << std::endl;
+        if (DEBUG3) std::cout << KBLU << nfo() << "Achieved quorum:" << this->qsize << KNRM << std::endl;
 
       }
     } else {
@@ -4094,7 +4117,7 @@ void Handler::handleRecoveryRBF(MsgRecoveryRBF msg) {
   if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
   View v = msg.view;
   if (v == this->view) {
-    if (amEpochLeaderOf(v)) {
+    if (amEpochLeaderOf(v, myid)) {
       // If leading this epoch, store the message for use in a TC creation
       log.storeRecoveryRBF(msg); 
     }
