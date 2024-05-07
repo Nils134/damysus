@@ -40,3 +40,7 @@ Write down where to add new opcodes:
     - Client.cpp
     - types.h
     - reg_handler
+
+struct for Wish class etc:
+    Enclave/user_types.h
+    

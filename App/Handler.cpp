@@ -4167,11 +4167,12 @@ void Handler::handleRecoveryRBF(MsgRecoveryRBF msg) {
 // After a sufficient amount of Wish messages, create a TC with the collected nonces which other TEEs can accept
 // Send to all participants
 void Handler::createTCRBF() {
-  if (DEBUG1) std::cout << KBLU << nfo() << "TC creation" << KNRM << std::endl;
+  
   std::set<MsgWishRBF> wishes = this->log.getWishRBF(this->view, this->qsize);
   std::set<MsgWishRBF>::iterator itwish = wishes.begin();
   Wish wish(itwish->view, itwish->recoveredView, itwish->sign);
   TC result = callTEEleaderWishRBF(wish);
+  if (DEBUG1) std::cout << KBLU << nfo() << "TC creation " << result.prettyPrint() << KNRM << std::endl;
   MsgTCRBF msg(result.getView(), result.getSigns());
   Peers recipients = remove_from_peers(this->myid); //log TC message to our own
   sendMsgTCRBF(msg, recipients);
