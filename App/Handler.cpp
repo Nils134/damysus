@@ -614,6 +614,7 @@ const uint8_t MsgPrepareRBF::opcode;
 const uint8_t MsgPreCommitRBF::opcode;
 const uint8_t MsgWishRBF::opcode;
 const uint8_t MsgRecoveryRBF::opcode;
+const uint8_t MsgTCRBF::opcode;
 #endif
 
 const uint8_t MsgTransaction::opcode;
@@ -778,6 +779,7 @@ pnet(pec,pconf), cnet(cec,cconf) {
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_precommitrbf,  this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_wishrbf,       this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_recoveryrbf,   this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_tcrbf,   this, _1, _2));
 #else
   std::cout << KRED << nfo() << "TODO" << KNRM << std::endl;
 #endif

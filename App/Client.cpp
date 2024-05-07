@@ -40,6 +40,7 @@ const uint8_t MsgPrepareRBF::opcode;
 const uint8_t MsgPreCommitRBF::opcode;
 const uint8_t MsgWishRBF::opcode;
 const uint8_t MsgRecoveryRBF::opcode;
+const uint8_t MsgTCRBF::opcode;
 #else
 const uint8_t MsgNewView::opcode;
 const uint8_t MsgPrepare::opcode;
