@@ -9,7 +9,7 @@ QC::QC() {
 QC::QC(View view, Signs signs) {
   this->set = true;
   this->view = view;
-  this->sign = sign;
+  this->signs = signs;
 }
 
 bool  QC::isSet() { return this->set;}

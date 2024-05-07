@@ -9,7 +9,7 @@ TC::TC() {
 TC::TC(View view, Signs signs) {
   this->set = true;
   this->view = view;
-  this->sign = sign;
+  this->signs = signs;
 }
 
 bool  TC::isSet() { return this->set;}

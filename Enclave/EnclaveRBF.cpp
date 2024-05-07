@@ -55,8 +55,16 @@ sgx_status_t RBF_TEEprepare(hash_t *hash, accum_t *acc, just_t *res) {
   if (verifyAccum(acc)
       && RBFview == acc->view
       && acc->size == getQsize()
-      && RBFview%getQsize() != 0) {//new epoch
+    ) {
+    if (RBFview%getQsize() != 0) {//new epoch
     *res = RBF_sign(*hash,acc->hash,acc->prepv);
+    } 
+    else {
+      rdata_t rdata;
+      rdata.justv = acc->view; //set view to see that we have an invalid data read for the new view
+      res->rdata = rdata; 
+      res->set = false;
+          }
   } else { res->set = false; }
   return status;
 }
@@ -188,12 +196,12 @@ sgx_status_t RBF_TEEwish(wish_t *res) {
 
 //Simulate receiving messages (similar to upon functions)
 
-// sgx_status_t RBF_TEEreceiveTC() {
-//   sgx_status_t status = SGX_SUCCESS;
-//   //send vote to a leader that sends a valid proposed TC
+sgx_status_t RBF_TEEreceiveTC(tc_t *tc, tc_t *res) {
+  sgx_status_t status = SGX_SUCCESS;
+  //send vote to a leader that sends a valid proposed TC
 
-//   return status;
-// }
+  return status;
+}
 
 
 // LEADER FUNCTIONS
@@ -202,7 +210,7 @@ sgx_status_t RBF_TEEwish(wish_t *res) {
 sgx_status_t RBF_TEEleaderWish(wish_t *wish, tc_t *res) {
   sgx_status_t status = SGX_SUCCESS;
   //receive bunch of wish and recover messages, combine into TC and send to all TEEs
-  
+
   return status;
 }
 
@@ -216,6 +224,7 @@ sgx_status_t RBF_TEEleaderWish(wish_t *wish, tc_t *res) {
 
 sgx_status_t RBF_TEEreceiveQC(hash_t *hash, accum_t *acc, qc_t *qc, just_t *res) {
   //Also check for qc validity
+  sgx_status_t status = SGX_SUCCESS;
   if (verifyAccum(acc)
       && RBFview == acc->view
       && acc->size == getQsize()

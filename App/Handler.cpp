@@ -109,11 +109,11 @@ void setSigns(Signs signs, signs_t *s) {
   }
 }
 
-void setSign(Signs sign, sign_t *s) {
-    s->signs[i].set=signs.get(i).isSet();
-    s->signs[i].signer=signs.get(i).getSigner();
+void setSign(Sign sign, sign_t *s) {
+    s->set=sign.isSet();
+    s->signer=sign.getSigner();
     //for (int k = 0; k < SIGN_LEN; k++) { (s->signs[i].sign)[k] = (signs.get(i).getSign())[k]; }
-    memcpy(s->signs[i].sign,signs.get(i).getSign(),SIGN_LEN);
+    memcpy(s->sign,sign.getSign(),SIGN_LEN);
   
 }
 
@@ -145,7 +145,15 @@ void setWish(Wish wish, wish_t *w) {
   w->set = 1;
   w->view = wish.getView();
   w->recoveredView = wish.getRecView();
-  setSign(wish.getSign(),w->sign );
+  setSign(wish.getSign(), &(w->sign));
+}
+
+void setTC(TC tc, tc_t *tcout) {//TODO
+  
+}
+
+void setQC(QC qc, qc_t *qcout) {//TODO
+  
 }
 
 // stores [just] in [j]
@@ -332,6 +340,8 @@ void setVotes(Vote<Void,Cert> votes[MAX_NUM_SIGNATURES], votes_t *vs) {
   }
 }
 
+
+
 // RBF convert struct to class
 Recovery getRec(recovery_t *r) {
   View view = r->view;
@@ -349,14 +359,12 @@ Wish getWish(wish_t *w) {
 
 TC getTC(tc_t *t) {
   View view = t->view;
-  Signs signs(t->signs);
-  return TC(view, signs);
+  return TC();
 }
 
-QC getQC(qc_t *t) {
-  View view = w->view;
-  Signs signs();
-  return QC(view, signs);
+QC getQC(qc_t *q) {
+  View view = q->view;
+  return QC();
 }
 
 
@@ -3624,7 +3632,7 @@ void Handler::prepareRBF(){
 
       // This one we'll store, and wait until we have this->qsize of them
       Just justPrep = callTEEprepareRBF(block.hash(),acc);
-      
+      if (DEBUG1) std::cout << KBLU << nfo() << "prepare"  << !justPrep.isSet() << ", data " << justPrep.getRData().getJustv() << KNRM << std::endl;
       if (!justPrep.isSet() && justPrep.getRData().getJustv() % this->qsize == this->qsize-1) {//Should only advance to next epoch after QC
         Wish wishReq = callTEEWishRBF();
         if (DEBUG1) std::cout << KBLU << nfo() << "creating wish message leader for view=" << wishReq.prettyPrint() << KNRM << std::endl;
@@ -3701,29 +3709,7 @@ void Handler::decideRBF(RData data) {
 }
 
 
-// After a sufficient amount of Wish messages, create a TC with the collected nonces which other TEEs can accept
-// Send to all participants
-void Handler::createTCRBF() {
-  std::set<MsgWishRBF> wishes = this->log.getWishRBF(this->view, this->qsize);
-  callTEEleaderWishRBF(wishes);
-  MsgTCRBF msg;
-}
 
-// After a sufficient amount of TC confirmations, create a QC with the collected nonces
-// Send to all participants
-void Handler::createQCRBF(MsgQCRBF msg) {
-
-}
-
-// For backups to respond to TC messages received from leaders
-void Handler::respondToTCRBF(MsgTCRBF msg) {
-  
-}
-
-// For backups to respond to QC messages received from leaders
-void Handler::respondToQCRBF(MsgQCRBF msg){
-  
-}
 
 // For backups to respond to correct MsgLdrPrepareRBF messages received from leaders
 void Handler::respondToLdrPrepareRBF(Block block, Accum acc){
@@ -3944,12 +3930,12 @@ Recovery Handler::callTEErecoveryRBF(){
 TC Handler::callTEEreceiveTCRBF(TC justTC){//TODO: change 
   auto start = std::chrono::steady_clock::now();
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
-  just_t jout;
-  just_t jin;
-  setJust(justTC,&jin);
+  tc_t tcin;
+  tc_t tcout;
+  setTC(justTC,&tcin);
   sgx_status_t ret;
-  sgx_status_t status = RBF_TEEstore(global_eid, &ret, &jin, &jout);
-  Just just = getJust(&jout);
+  sgx_status_t status = RBF_TEEreceiveTC(global_eid, &ret, &tcin, &tcout);
+  TC tc = getTC(&tcout);
 #else
   Just just = tr.TEEstore(stats,this->nodes,j);
 #endif
@@ -3957,17 +3943,19 @@ TC Handler::callTEEreceiveTCRBF(TC justTC){//TODO: change
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
   stats.addTEEstore(time);
   stats.addTEEtime(time);
-  return just;
+  return tc;
 }
 
-Just Handler::callTEEreceiveQCRBF(QC justQC){//TOD: change
+Just Handler::callTEEreceiveQCRBF(QC justQC, Hash h, Accum acc){//TODO: change
   auto start = std::chrono::steady_clock::now();
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
-  just_t jin;
-  setJust(justQC,&jin);
+  qc_t qcin;
+  hash_t hash;
+  accum_t accum;
+  setQC(justQC,&qcin);
   sgx_status_t ret;
-  sgx_status_t status = RBF_TEEstore(global_eid, &ret, &jin, &jout);
+  sgx_status_t status = RBF_TEEreceiveQC(global_eid, &ret, &hash, &accum, &qcin, &jout);
   Just just = getJust(&jout);
 #else
   Just just = tr.TEEstore(stats,this->nodes,j);
@@ -3979,13 +3967,12 @@ Just Handler::callTEEreceiveQCRBF(QC justQC){//TOD: change
   return just;
 }
 
-TC callTEEleaderWishRBF(std::set<MsgWishRBF> wishes ) {
+TC Handler::callTEEleaderWishRBF(Wish wish) {
   auto start = std::chrono::steady_clock::now();
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   tc_t tcout;
   wish_t w;
-  wish = wishes.begin();
-  setWish(*wish,&w);
+  setWish(wish,&w);
   sgx_status_t ret;
   sgx_status_t status = RBF_TEEleaderWish(global_eid, &ret, &w, &tcout);
   TC tc = getTC(&tcout);
@@ -4149,6 +4136,32 @@ void Handler::handleRecoveryRBF(MsgRecoveryRBF msg) {
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
   stats.addTotalHandleTime(time);
+}
+
+// After a sufficient amount of Wish messages, create a TC with the collected nonces which other TEEs can accept
+// Send to all participants
+void Handler::createTCRBF() {
+  std::set<MsgWishRBF> wishes = this->log.getWishRBF(this->view, this->qsize);
+  std::set<MsgWishRBF>::iterator itwish = wishes.begin();
+  Wish wish(itwish->view, itwish->recoveredView, itwish->sign);
+  TC result = callTEEleaderWishRBF(wish);
+  
+}
+
+// After a sufficient amount of TC confirmations, create a QC with the collected nonces
+// Send to all participants
+void Handler::createQCRBF() {
+
+}
+
+// For backups to respond to TC messages received from leaders
+void Handler::respondToTCRBF(MsgTCRBF msg) {
+  
+}
+
+// For backups to respond to QC messages received from leaders
+void Handler::respondToQCRBF(MsgQCRBF msg){
+  
 }
 
 void Handler::handle_newviewrbf(MsgNewViewRBF msg, const PeerNet::conn_t &conn) {

@@ -491,7 +491,7 @@ struct MsgTCRBF {
     return false;
   }
   std::string prettyPrint() {
-    return "TC-RBF[" + view + ", " + nonce + "," + signs.prettyPrint() +  "]";
+    return "TC-RBF[" + std::to_string(view) + ", " + std::to_string(nonce) + "," + signs.prettyPrint() +  "]";
   }
   unsigned int sizeMsg() { return (sizeof(View) + sizeof(uint32_t)  + sizeof(Signs)); }
   void serialize(salticidae::DataStream &s) const { s << view << nonce << signs; }
@@ -510,7 +510,7 @@ struct MsgQCRBF {
     return false;
   }
   std::string prettyPrint() {
-    return "QC-RBF[" + view + ", " + nonce + "," + signs.prettyPrint() + "]";
+    return "QC-RBF[" + std::to_string(view) + ", " + std::to_string(nonce) + "," + signs.prettyPrint() + "]";
   }
   unsigned int sizeMsg() { return (sizeof(View) + sizeof(uint32_t) + sizeof(Signs)); }
   void serialize(salticidae::DataStream &s) const { s << view << nonce << signs; }

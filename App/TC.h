@@ -12,7 +12,7 @@ class TC {
  private:
   bool set = false;
   View view;
-  Sign sign; // signature
+  Signs signs; // signature
 
  public:
   TC();
