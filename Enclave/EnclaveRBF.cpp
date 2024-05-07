@@ -196,7 +196,7 @@ sgx_status_t RBF_TEEwish(wish_t *res) {
 sgx_status_t RBF_TEEreceiveTC(tc_t *tc, tc_t *res) {
   sgx_status_t status = SGX_SUCCESS;
   //send vote to a leader that sends a valid proposed TC
-
+  
   return status;
 }
 
@@ -206,8 +206,16 @@ sgx_status_t RBF_TEEreceiveTC(tc_t *tc, tc_t *res) {
 //Collect wish and recover messages and create a TC
 sgx_status_t RBF_TEEleaderWish(wish_t *wish, tc_t *res) {
   sgx_status_t status = SGX_SUCCESS;
+  bool set = true;
   //receive bunch of wish and recover messages, combine into TC and send to all TEEs
-
+  if (wish->view == RBFview) {//check if we are online 
+    res->set = 1;
+    res->view = RBFview;
+    std::string text = std::to_string(set) +  std::to_string(RBFview) + std::to_string(RBFprepv);
+    sign_t sign = signString(text);
+    res->signs.size = 1;
+    res->signs.signs[0] = sign;
+  }
   return status;
 }
 

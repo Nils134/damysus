@@ -149,7 +149,9 @@ void setWish(Wish wish, wish_t *w) {
 }
 
 void setTC(TC tc, tc_t *tcout) {//TODO
-  
+  tcout->set = 1;
+  tcout->view = tc.getView();
+  setSigns(tc.getSigns(), &(tcout->signs));
 }
 
 void setQC(QC qc, qc_t *qcout) {//TODO
