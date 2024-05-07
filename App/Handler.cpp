@@ -1094,6 +1094,12 @@ void Handler::sendMsgRecoveryRBF(MsgRecoveryRBF msg, Peers recipients) {
   if (DEBUGT) printNowTime("sending MsgRecoveryRBF");
 }
 
+void Handler::sendMsgTCRBF(MsgTCRBF msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgRecoveryRBF");
+}
+
 
 void Handler::sendMsgNewViewFree(MsgNewViewFree msg, Peers recipients) {
   if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
@@ -4164,7 +4170,7 @@ void Handler::createTCRBF() {
   std::set<MsgWishRBF>::iterator itwish = wishes.begin();
   Wish wish(itwish->view, itwish->recoveredView, itwish->sign);
   TC result = callTEEleaderWishRBF(wish);
-  MsgTCRBF msg(result.view, result.nonce, result.signs);
+  MsgTCRBF msg(result.getView(), result.getSigns());
   Peers recipients = remove_from_peers(this->myid); //log TC message to our own
   sendMsgTCRBF(msg, recipients);
 }
@@ -4177,7 +4183,7 @@ void Handler::createQCRBF() {
 
 // For backups to respond to TC messages received from leaders
 void Handler::respondToTCRBF(MsgTCRBF msg) {
-
+  if (DEBUG1) std::cout << KBLU << nfo() << "TC response" << KNRM << std::endl;
 }
 
 // For backups to respond to QC messages received from leaders
@@ -4217,7 +4223,7 @@ void Handler::handle_recoveryrbf(MsgRecoveryRBF msg, const PeerNet::conn_t &conn
 
 void Handler::handle_tcrbf(MsgTCRBF msg, const PeerNet::conn_t &conn){
   if (DEBUGT) printNowTime("handling MsgRecoveryRBF");
-  handleTCRBF(msg);
+  respondToTCRBF(msg);
 }
 
 

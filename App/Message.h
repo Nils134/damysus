@@ -482,9 +482,10 @@ struct MsgTCRBF {
   static const uint8_t opcode = HDR_TC_RBF;
   salticidae::DataStream serialized;
   View view;
-  uint32_t nonce;
+  uint32_t nonce = 0;
   Signs signs;
   MsgTCRBF(const View &view, uint32_t nonce, const Signs &signs) : view(view), nonce(nonce),signs(signs) { serialized << view  << nonce << signs; }
+  MsgTCRBF(const View &view, const Signs &signs) : view(view),signs(signs) { serialized << view << nonce << signs; }
   MsgTCRBF(salticidae::DataStream &&s) { s >> view >> nonce>>  signs; }
   bool operator<(const MsgTCRBF& s) const {
     if (signs < s.signs) { return true; }
