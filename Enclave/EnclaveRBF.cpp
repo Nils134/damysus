@@ -28,9 +28,14 @@ just_t RBF_sign(hash_t h1, hash_t h2, View v2) {
   rdata.proph = h1; rdata.propv = RBFview; rdata.justh = h2; rdata.justv = v2; rdata.phase = RBFphase;
   sign_t sign = signString(rdata2string(rdata));
   signs_t signs; signs.size = 1; signs.signs[0] = sign;
-  just_t j; j.set = 1; j.rdata = rdata; j.signs = signs;
-
-  RBF_increment();
+  just_t j; j.set=0; j.rdata = rdata; j.signs = signs;
+  if (v2%getQsize() != 0 || v2 ==0) { //regular view
+    j.set = 1;
+    RBF_increment();
+  }
+  else { // start of an epoch
+    j.set = 0;
+  }
   
   return j;
 }
@@ -56,15 +61,7 @@ sgx_status_t RBF_TEEprepare(hash_t *hash, accum_t *acc, just_t *res) {
       && RBFview == acc->view
       && acc->size == getQsize()
     ) {
-    if (RBFview%getQsize() != 0) {//new epoch
     *res = RBF_sign(*hash,acc->hash,acc->prepv);
-    } 
-    else {
-      rdata_t rdata;
-      rdata.justv = acc->view; //set view to see that we have an invalid data read for the new view
-      res->rdata = rdata; 
-      res->set = false;
-          }
   } else { res->set = false; }
   return status;
 }
