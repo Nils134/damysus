@@ -195,6 +195,7 @@ class Handler {
   void sendMsgPreCommitRBF(MsgPreCommitRBF msg, Peers recipients);
   void sendMsgWishRBF(MsgWishRBF msg, Peers recipients);
   void sendMsgRecoveryRBF(MsgRecoveryRBF msg, Peers recipients);
+  void sendMsgTCRBF(MsgTCRBF msg, Peers recipients);
 
   void sendMsgNewViewComb(MsgNewViewComb msg, Peers recipients);
   void sendMsgLdrPrepareComb(MsgLdrPrepareComb msg, Peers recipients);
@@ -445,6 +446,7 @@ class Handler {
   void handlePreCommitRBF(MsgPreCommitRBF msg);
   void handleWishRBF(MsgWishRBF msg);
   void handleRecoveryRBF(MsgRecoveryRBF msg);
+  void handleTCRBF(MsgTCRBF msg);
 
   void handle_newviewrbf(MsgNewViewRBF msg, const PeerNet::conn_t &conn);
   void handle_preparerbf(MsgPrepareRBF msg, const PeerNet::conn_t &conn);
@@ -452,6 +454,7 @@ class Handler {
   void handle_precommitrbf(MsgPreCommitRBF msg, const PeerNet::conn_t &conn);
   void handle_wishrbf(MsgWishRBF msg, const PeerNet::conn_t &conn);
   void handle_recoveryrbf(MsgRecoveryRBF msg, const PeerNet::conn_t &conn);
+  void handle_tcrbf(MsgTCRBF msg, const PeerNet::conn_t &conn);
 
 
   // ------------------------------------------------------------

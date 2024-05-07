@@ -359,12 +359,22 @@ Wish getWish(wish_t *w) {
 
 TC getTC(tc_t *t) {
   View view = t->view;
-  return TC();
+  Sign  a[MAX_NUM_SIGNATURES];
+  for (int i = 0; i < MAX_NUM_SIGNATURES; i++) {
+    a[i]=Sign(t->signs.signs[i].set,t->signs.signs[i].signer,t->signs.signs[i].sign);
+  }
+  Signs signs(t->signs.size,a);
+  return TC(view, signs);
 }
 
 QC getQC(qc_t *q) {
   View view = q->view;
-  return QC();
+  Sign  a[MAX_NUM_SIGNATURES];
+  for (int i = 0; i < MAX_NUM_SIGNATURES; i++) {
+    a[i]=Sign(q->signs.signs[i].set,q->signs.signs[i].signer,q->signs.signs[i].sign);
+  }
+  Signs signs(q->signs.size,a);
+  return QC(view, signs);
 }
 
 
@@ -4154,7 +4164,9 @@ void Handler::createTCRBF() {
   std::set<MsgWishRBF>::iterator itwish = wishes.begin();
   Wish wish(itwish->view, itwish->recoveredView, itwish->sign);
   TC result = callTEEleaderWishRBF(wish);
-  
+  MsgTCRBF msg(result.view, result.nonce, result.signs);
+  Peers recipients = remove_from_peers(this->myid); //log TC message to our own
+  sendMsgTCRBF(msg, recipients);
 }
 
 // After a sufficient amount of TC confirmations, create a QC with the collected nonces
@@ -4165,7 +4177,7 @@ void Handler::createQCRBF() {
 
 // For backups to respond to TC messages received from leaders
 void Handler::respondToTCRBF(MsgTCRBF msg) {
-  
+
 }
 
 // For backups to respond to QC messages received from leaders
@@ -4201,6 +4213,11 @@ void Handler::handle_wishrbf(MsgWishRBF msg, const PeerNet::conn_t &conn){
 void Handler::handle_recoveryrbf(MsgRecoveryRBF msg, const PeerNet::conn_t &conn){
   if (DEBUGT) printNowTime("handling MsgRecoveryRBF");
   handleRecoveryRBF(msg);
+}
+
+void Handler::handle_tcrbf(MsgTCRBF msg, const PeerNet::conn_t &conn){
+  if (DEBUGT) printNowTime("handling MsgRecoveryRBF");
+  handleTCRBF(msg);
 }
 
 

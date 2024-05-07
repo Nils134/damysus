@@ -12,7 +12,6 @@ class QC {
  private:
   bool set = false;
   View view;
-  View recoveredView;
   Signs signs; // signature
 
  public:
