@@ -4188,17 +4188,19 @@ void Handler::createQCRBF() {
 
 // For backups to respond to TC messages received from leaders
 void Handler::respondToTCRBF(MsgTCRBF msg) {
-  if (DEBUG1) std::cout << KBLU << nfo() << "TC response " << msg.prettyPrint() << KNRM << std::endl;
   // TODO:
   // check validity of message given view
   // if not signed yet, sign the view and reply to the sender of the TC (should be first of Signs vector)
   if (msg.view%this->qsize == 0) { //start of epoch
-    if (amEpochLeaderOf(msg.view, msg.signs.get(0).getSigner()) ) { //sender is a leader within that epoch
+    if (amEpochLeaderOf(msg.view, msg.signs.get(0).getSigner()) && msg.signs.get(0).getSigner() != this->myid ) { //sender is a leader within that epoch
       if (DEBUG1) std::cout << KBLU << nfo() << "TC response " << msg.prettyPrint() << KNRM << std::endl;
       TC input(msg.view, msg.signs);
       TC res = callTEEreceiveTCRBF(input);
       
       if (DEBUG1) std::cout << KBLU << nfo() << "TC added " << res.prettyPrint() << KNRM << std::endl;
+    }
+    if (amEpochLeaderOf(msg.view, msg.signs.get(0).getSigner()) && msg.signs.get(0).getSigner() == this->myid ) { //receive a vote for a TC
+      //Store the vote, and if bigger than quorum size, create a QC so we can move on to the next epoch
     }
   }
 

@@ -210,6 +210,15 @@ bool msgRecoveryRBFFrom(std::set<MsgRecoveryRBF> msgs, PID signer) {
   return false;
 }
 
+msgTCRBFFrom (std::set<MsgTCRBF>, PID signer) {
+  for (std::set<MsgRecoveryRBF>::iterator it=msgs.begin(); it!=msgs.end(); ++it) {
+    MsgRecoveryRBF msg = (MsgRecoveryRBF)*it;
+    PID k = msg.signs[1].getSigner();
+    if (signer == k) { return true; }
+  }
+  return false;
+}
+
 
 bool msgNewViewFreeFrom(std::set<MsgNewViewFree> msgs, PID signer) {
   for (std::set<MsgNewViewFree>::iterator it=msgs.begin(); it!=msgs.end(); ++it) {
@@ -774,6 +783,10 @@ unsigned int Log::storeRecoveryRBF(MsgRecoveryRBF msg) {
   }
 
   return 0;
+}
+
+unsigned int Log::storeTCRBF(MsgTCRBF msg) {
+
 }
   
 std::set<MsgRecoveryRBF> Log::getRecoveryRBF(View view, unsigned int n) {

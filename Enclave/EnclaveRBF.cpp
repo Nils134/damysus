@@ -1,7 +1,7 @@
 #include <set>
 #include "EnclaveShare.h"
-
-
+#include <string.h>
+ 
 hash_t RBFpreph = newHash(); // hash of the last prepared block
 View   RBFprepv = 0;             // preph's view
 View   RBFview  = 0;             // current view
@@ -197,6 +197,24 @@ sgx_status_t RBF_TEEreceiveTC(tc_t *tc, tc_t *res) {
   sgx_status_t status = SGX_SUCCESS;
   //send vote to a leader that sends a valid proposed TC
   
+  //should validate sign to be legit
+  //should check if this is a valid epoch leader for that view. Methods for this defined in Handler class
+  bool set = true;
+  //send message wish(view[self], sign) to all leaders view, ..., view+f+u+1
+  res->set = 1;
+  res->view = tc->view;
+  
+  std::string text = std::to_string(set) +  std::to_string(res->view);
+  sign_t sign = signString(text);
+  for (int i = 0; i< tc->signs.size; i++ ) { //copy existing 
+    sign_t s;
+    s.set = tc->signs.signs[i].set;
+    s.signer = tc->signs.signs[i].signer;
+    memcpy(s.sign, tc->signs.signs[i].sign, SIGN_LEN);
+  }
+  res->signs.signs[tc->signs.size] = sign;
+  res->signs.size = tc->signs.size +1;
+
   return status;
 }
 
