@@ -157,7 +157,7 @@ class Log {
   Signs getPrecommitRBF(View view, unsigned int n);
   std::set<MsgWishRBF> getWishRBF(View view, unsigned int n);
   std::set<MsgRecoveryRBF> getRecoveryRBF(View view, unsigned int n);
-  std::set<MsgRecoveryRBF> getTCRBF(View view, unsigned int n);
+  std::set<MsgTCRBF> getTCRBF(View view, unsigned int n);
 
   MsgLdrPrepareRBF firstLdrPrepareRBF(View view);
   MsgPrepareRBF firstPrepareRBF(View view);

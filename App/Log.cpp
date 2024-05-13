@@ -210,10 +210,10 @@ bool msgRecoveryRBFFrom(std::set<MsgRecoveryRBF> msgs, PID signer) {
   return false;
 }
 
-msgTCRBFFrom (std::set<MsgTCRBF>, PID signer) {
-  for (std::set<MsgRecoveryRBF>::iterator it=msgs.begin(); it!=msgs.end(); ++it) {
-    MsgRecoveryRBF msg = (MsgRecoveryRBF)*it;
-    PID k = msg.signs[1].getSigner();
+bool msgTCRBFFrom(std::set<MsgTCRBF> msgs, PID signer) {
+  for (std::set<MsgTCRBF>::iterator it=msgs.begin(); it!=msgs.end(); ++it) {
+    MsgTCRBF msg = (MsgTCRBF)*it;
+    PID k = msg.signs.get(1).getSigner();
     if (signer == k) { return true; }
   }
   return false;
@@ -800,14 +800,14 @@ std::set<MsgRecoveryRBF> Log::getRecoveryRBF(View view, unsigned int n) {
 
 unsigned int Log::storeTCRBF(MsgTCRBF msg) {
   View v = msg.view;
-  PID signer = msg.sign.getSigner();
-
+  PID signer = msg.signs.get(1).getSigner();
+  if (DEBUG) { std::cout << KGRN << "storing TC" << msg.prettyPrint() << KNRM << std::endl; }
   std::map<View,std::set<MsgTCRBF>>::iterator it1 = this->TCRBF.find(v);
-  if (it1 != this->recoveryRBF.end()) { // there is already an entry for this view
+  if (it1 != this->TCRBF.end()) { // there is already an entry for this view
     std::set<MsgTCRBF> msgs = it1->second;
-
     // We only add 'msg' to the log if the sender hasn't already sent a new-view message for this view
     if (!msgTCRBFFrom(msgs,signer)) {
+
       msgs.insert(msg);
       this->TCRBF[v]=msgs;
       //if (DEBUG) { std::cout << KGRN << "updated entry; #=" << msgs.size() << KNRM << std::endl; }

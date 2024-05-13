@@ -152,6 +152,8 @@ void setTC(TC tc, tc_t *tcout) {//TODO
   tcout->set = 1;
   tcout->view = tc.getView();
   setSigns(tc.getSigns(), &(tcout->signs));
+  if (DEBUG1) std::cout << KBLU  << "TC struct set" << tcout->signs.signs[0].set << " set, signer " << tcout->signs.signs[0].signer << KNRM << std::endl;
+
 }
 
 void setQC(QC qc, qc_t *qcout) {//TODO
@@ -1101,7 +1103,7 @@ void Handler::sendMsgRecoveryRBF(MsgRecoveryRBF msg, Peers recipients) {
 void Handler::sendMsgTCRBF(MsgTCRBF msg, Peers recipients) {
   if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
   this->pnet.multicast_msg(msg, getPeerids(recipients));
-  if (DEBUGT) printNowTime("sending MsgRecoveryRBF");
+  if (DEBUGT) printNowTime("sending MsgTCRBF");
 }
 
 
@@ -4196,11 +4198,23 @@ void Handler::respondToTCRBF(MsgTCRBF msg) {
       if (DEBUG1) std::cout << KBLU << nfo() << "TC response " << msg.prettyPrint() << KNRM << std::endl;
       TC input(msg.view, msg.signs);
       TC res = callTEEreceiveTCRBF(input);
-      
-      if (DEBUG1) std::cout << KBLU << nfo() << "TC added " << res.prettyPrint() << KNRM << std::endl;
+
+      Peers recipients = keep_from_peers(msg.signs.get(0).getSigner()); //log TC message to our own
+      input.getSigns().add(res.getSigns().get(1));
+      MsgTCRBF msgres(input.getView(), input.getSigns());
+      sendMsgTCRBF(msgres, recipients);
+      if (DEBUG1) std::cout << KBLU << nfo() << "TC added " << msgres.signs.prettyPrint() << " , send to" << msg.signs.get(0).getSigner()<< KNRM << std::endl;
     }
-    if (amEpochLeaderOf(msg.view, msg.signs.get(0).getSigner()) && msg.signs.get(0).getSigner() == this->myid ) { //receive a vote for a TC
+    if (DEBUG1) std::cout << KBLU << nfo() << "TC leader? " << this->myid<< " ?=" <<msg.signs.get(0).getSigner() << " , send to" << msg.signs.get(0).getSigner()<< KNRM << std::endl;
+    if (amEpochLeaderOf(msg.view, this->myid) && msg.signs.get(0).getSigner() == this->myid ) { //receive a vote for a TC
       //Store the vote, and if bigger than quorum size, create a QC so we can move on to the next epoch
+      
+      unsigned int value =  this->log.storeTCRBF(msg);
+      if (DEBUG1) std::cout << KBLU << nfo() << "TC leader! " << msg.signs.get(0).getSigner() << " , " << value << KNRM << std::endl;
+      if (value == this->qsize) {
+        //Create QC in TEE
+        if (DEBUG1) std::cout << KBLU << nfo() << "QC size reached" << KNRM << std::endl;
+      }
     }
   }
 
