@@ -3978,17 +3978,13 @@ TC Handler::callTEEreceiveTCRBF(TC justTC){//TODO: change
   return tc;
 }
 
-Just Handler::callTEEreceiveQCRBF(QC justQC, Hash h, Accum acc){//TODO: change
+void Handler::callTEEreceiveQCRBF(QC justQC){//TODO: change
   auto start = std::chrono::steady_clock::now();
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
-  just_t jout;
   qc_t qcin;
-  hash_t hash;
-  accum_t accum;
   setQC(justQC,&qcin);
   sgx_status_t ret;
-  sgx_status_t status = RBF_TEEreceiveQC(global_eid, &ret, &hash, &accum, &qcin, &jout);
-  Just just = getJust(&jout);
+  sgx_status_t status = RBF_TEEreceiveQC(global_eid, &ret,&qcin);
 #else
   Just just = tr.TEEstore(stats,this->nodes,j);
 #endif
@@ -3996,7 +3992,6 @@ Just Handler::callTEEreceiveQCRBF(QC justQC, Hash h, Accum acc){//TODO: change
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
   stats.addTEEstore(time);
   stats.addTEEtime(time);
-  return just;
 }
 
 TC Handler::callTEEleaderWishRBF(Wish wish) {
@@ -4211,9 +4206,7 @@ void Handler::createQCRBF() {
   //supply hash, accum, (similar to TEEprepare) and the acquired TC
   if (DEBUG1) std::cout << KBLU << nfo() << "creating quorum certificate" << KNRM << std::endl;
   TC combination = TC(); // combine all TCs stored in this->log to form one TC
-  Hash temp = Hash();
-  Accum acc = Accum();
-  QC quorumCertificate = callTEEleaderQuorumRBF(temp, acc, combination);
+  QC quorumCertificate = callTEEleaderQuorumRBF(combination);
   //resulting just can be send to the others, along with QC to allow continuation of the protocol 
 }
 
@@ -4250,6 +4243,8 @@ void Handler::respondToQCRBF(MsgQCRBF msg){
   // verify QC, check if we still need it for that view/epoch or if we are already ahead
   // broadcast to all?
   if (DEBUG1) std::cout << KBLU << nfo() << "receiving QC for view " << msg.view << KNRM << std::endl;
+  QC qc(msg.getView(), msg.getSigns());
+  callTEEreceiveQCRBF(qc);
 }
 
 void Handler::handle_newviewrbf(MsgNewViewRBF msg, const PeerNet::conn_t &conn) {

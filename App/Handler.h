@@ -430,7 +430,7 @@ class Handler {
   Wish callTEEWishRBF();
   Recovery callTEErecoveryRBF();
   TC callTEEreceiveTCRBF(TC justTC);
-  Just callTEEreceiveQCRBF(QC QC, Hash h, Accum acc); //epoch config complete, should return a TEEprepare that indicates permission
+  void callTEEreceiveQCRBF(QC QC); //epoch config complete
 
   TC callTEEleaderWishRBF(Wish wish);
   QC callTEEleaderQuorumRBF(Hash h, Accum a, TC tc);
