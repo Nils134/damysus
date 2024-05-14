@@ -211,6 +211,7 @@ sgx_status_t RBF_TEEreceiveTC(tc_t *tc, tc_t *res) {
     s.set = tc->signs.signs[i].set;
     s.signer = tc->signs.signs[i].signer;
     memcpy(s.sign, tc->signs.signs[i].sign, SIGN_LEN);
+    res->signs.signs[i] = s;
   }
   res->signs.signs[tc->signs.size] = sign;
   res->signs.size = tc->signs.size +1;

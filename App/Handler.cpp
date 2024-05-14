@@ -364,10 +364,14 @@ Wish getWish(wish_t *w) {
 TC getTC(tc_t *t) {
   View view = t->view;
   Sign  a[MAX_NUM_SIGNATURES];
+  for (int i = 0; i < 3; i++) {
+    if (DEBUG1) std::cout << KBLU  << "getTCname " << t->signs.signs[i].set << " , signer " << t->signs.signs[i].signer << KNRM << std::endl;
+  }
   for (int i = 0; i < MAX_NUM_SIGNATURES; i++) {
     a[i]=Sign(t->signs.signs[i].set,t->signs.signs[i].signer,t->signs.signs[i].sign);
   }
   Signs signs(t->signs.size,a);
+  if (DEBUG1) std::cout << KBLU  << "getTC" << signs.prettyPrint() << KNRM << std::endl;
   return TC(view, signs);
 }
 
@@ -4176,7 +4180,6 @@ void Handler::createTCRBF() {
   std::set<MsgWishRBF>::iterator itwish = wishes.begin();
   Wish wish(itwish->view, itwish->recoveredView, itwish->sign);
   TC result = callTEEleaderWishRBF(wish);
-  if (DEBUG1) std::cout << KBLU << nfo() << "TC creation " << result.prettyPrint() << KNRM << std::endl;
   MsgTCRBF msg(result.getView(), result.getSigns());
   Peers recipients = remove_from_peers(this->myid); //log TC message to our own
   sendMsgTCRBF(msg, recipients);
@@ -4195,22 +4198,17 @@ void Handler::respondToTCRBF(MsgTCRBF msg) {
   // if not signed yet, sign the view and reply to the sender of the TC (should be first of Signs vector)
   if (msg.view%this->qsize == 0) { //start of epoch
     if (amEpochLeaderOf(msg.view, msg.signs.get(0).getSigner()) && msg.signs.get(0).getSigner() != this->myid ) { //sender is a leader within that epoch
-      if (DEBUG1) std::cout << KBLU << nfo() << "TC response " << msg.prettyPrint() << KNRM << std::endl;
       TC input(msg.view, msg.signs);
       TC res = callTEEreceiveTCRBF(input);
-
-      Peers recipients = keep_from_peers(msg.signs.get(0).getSigner()); //log TC message to our own
-      input.getSigns().add(res.getSigns().get(1));
-      MsgTCRBF msgres(input.getView(), input.getSigns());
+      if (DEBUG1) std::cout << KBLU << nfo() << "TC res" << res.prettyPrint() << KNRM << std::endl;
+      MsgTCRBF msgres(res.getView(), res.getSigns());
+      Peers recipients = keep_from_peers(msg.signs.get(0).getSigner());
       sendMsgTCRBF(msgres, recipients);
-      if (DEBUG1) std::cout << KBLU << nfo() << "TC added " << msgres.signs.prettyPrint() << " , send to" << msg.signs.get(0).getSigner()<< KNRM << std::endl;
     }
-    if (DEBUG1) std::cout << KBLU << nfo() << "TC leader? " << this->myid<< " ?=" <<msg.signs.get(0).getSigner() << " , send to" << msg.signs.get(0).getSigner()<< KNRM << std::endl;
     if (amEpochLeaderOf(msg.view, this->myid) && msg.signs.get(0).getSigner() == this->myid ) { //receive a vote for a TC
       //Store the vote, and if bigger than quorum size, create a QC so we can move on to the next epoch
       
       unsigned int value =  this->log.storeTCRBF(msg);
-      if (DEBUG1) std::cout << KBLU << nfo() << "TC leader! " << msg.signs.get(0).getSigner() << " , " << value << KNRM << std::endl;
       if (value == this->qsize) {
         //Create QC in TEE
         if (DEBUG1) std::cout << KBLU << nfo() << "QC size reached" << KNRM << std::endl;

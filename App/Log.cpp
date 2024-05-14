@@ -801,7 +801,7 @@ std::set<MsgRecoveryRBF> Log::getRecoveryRBF(View view, unsigned int n) {
 unsigned int Log::storeTCRBF(MsgTCRBF msg) {
   View v = msg.view;
   PID signer = msg.signs.get(1).getSigner();
-  if (DEBUG) { std::cout << KGRN << "storing TC" << msg.prettyPrint() << KNRM << std::endl; }
+  if (DEBUG1) { std::cout << KGRN << "storing TC" << msg.prettyPrint() << KNRM << std::endl; }
   std::map<View,std::set<MsgTCRBF>>::iterator it1 = this->TCRBF.find(v);
   if (it1 != this->TCRBF.end()) { // there is already an entry for this view
     std::set<MsgTCRBF> msgs = it1->second;
