@@ -4226,7 +4226,7 @@ void Handler::createQCRBF() {
   if (DEBUG1) std::cout << KBLU << nfo() << "quorum certificate "<< quorumCertificate.prettyPrint() << KNRM << std::endl;
   Peers recipients = remove_from_peers(this->myid);
   MsgQCRBF msg(quorumCertificate.getView(), quorumCertificate.getSigns());
-  sendMsgQCRBF(msg, recipients)
+  sendMsgQCRBF(msg, recipients);
 }
 
 // For backups to respond to TC messages received from leaders

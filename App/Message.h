@@ -505,6 +505,7 @@ struct MsgQCRBF {
   uint32_t nonce = 0;
   Signs signs;
   MsgQCRBF(const View &view, uint32_t nonce, const Signs &signs) : view(view), nonce(nonce),signs(signs) { serialized << view  << nonce << signs; }
+  MsgQCRBF(const View &view, const Signs &signs) : view(view),signs(signs) { serialized << view  << nonce << signs; }
   MsgQCRBF(salticidae::DataStream &&s) { s >> view >> nonce>>  signs; }
   bool operator<(const MsgQCRBF& s) const {
     if (signs < s.signs) { return true; }
