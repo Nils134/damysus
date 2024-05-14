@@ -238,13 +238,13 @@ sgx_status_t RBF_TEEleaderWish(wish_t *wish, tc_t *res) {
   return status;
 }
 
-// //Collect TC votes and create a quorum for next epoch
-// sgx_status_t RBF_TEEleaderCreateQuorum() {
-//   sgx_status_t status = SGX_SUCCESS;
-//   //receive TC votes and send QC for next epoch to all TEEs
+//Collect TC votes and create a quorum for next epoch
+sgx_status_t RBF_TEEleaderCreateQuorum(hash_t *hash, accum_t *acc, tc_t *tc, qc_t *qc) { //TODO: check comparison with TC creation
+  sgx_status_t status = SGX_SUCCESS;
+  //receive TC votes and send QC for next epoch to all TEEs
   
-//   return status;
-// }
+  return status;
+}
 
 sgx_status_t RBF_TEEreceiveQC(hash_t *hash, accum_t *acc, qc_t *qc, just_t *res) {
   //Also check for qc validity
