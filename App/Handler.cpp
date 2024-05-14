@@ -148,16 +148,16 @@ void setWish(Wish wish, wish_t *w) {
   setSign(wish.getSign(), &(w->sign));
 }
 
-void setTC(TC tc, tc_t *tcout) {//TODO
+void setTC(TC tc, tc_t *tcout) {
   tcout->set = 1;
   tcout->view = tc.getView();
   setSigns(tc.getSigns(), &(tcout->signs));
-  if (DEBUG1) std::cout << KBLU  << "TC struct set" << tcout->signs.signs[0].set << " set, signer " << tcout->signs.signs[0].signer << KNRM << std::endl;
-
 }
 
-void setQC(QC qc, qc_t *qcout) {//TODO
-  
+void setQC(QC qc, qc_t *qcout) {
+  qcout->set = 1;
+  qcout->view = qc.getView();
+  setSigns(qc.getSigns(), &(qcout->signs));
 }
 
 // stores [just] in [j]
