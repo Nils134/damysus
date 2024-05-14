@@ -433,7 +433,7 @@ class Handler {
   void callTEEreceiveQCRBF(QC QC); //epoch config complete
 
   TC callTEEleaderWishRBF(Wish wish);
-  QC callTEEleaderQuorumRBF(Hash h, Accum a, TC tc);
+  QC callTEEleaderQuorumRBF(TC tc);
 
   void callTEEattemptrollbackRBF(Just j);
 

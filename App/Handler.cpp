@@ -4013,16 +4013,14 @@ TC Handler::callTEEleaderWishRBF(Wish wish) {
   return tc;
 }
 
-QC Handler::callTEEleaderQuorumRBF(Hash h, Accum acc, TC tc) {
+QC Handler::callTEEleaderQuorumRBF(TC tc) {
   auto start = std::chrono::steady_clock::now();
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   qc_t qcout;
   tc_t tcin;
-  hash_t hashin;
-  accum_t accumin;
   setTC(tc, &tcin);
   sgx_status_t ret;
-  sgx_status_t status = RBF_TEEleaderCreateQuorum(global_eid, &ret, &hashin, &accumin, &tcin, &qcout);
+  sgx_status_t status = RBF_TEEleaderCreateQuorum(global_eid, &ret, &tcin, &qcout);
   QC qc = getQC(&qcout);
 #else
   Just just = tr.TEEstore(stats,this->nodes,j);
@@ -4205,9 +4203,22 @@ void Handler::createQCRBF() {
   //append all TCs into one TC
   //supply hash, accum, (similar to TEEprepare) and the acquired TC
   if (DEBUG1) std::cout << KBLU << nfo() << "creating quorum certificate" << KNRM << std::endl;
-  TC combination = TC(); // combine all TCs stored in this->log to form one TC
+  std::set<MsgTCRBF> TCvotes = this->log.getTCRBF(this->view, this->qsize);
+  Signs TCvoteSigns = Signs();
+  std::set<MsgTCRBF>::iterator itvotes;
+  for (itvotes=TCvotes.begin(); itvotes!=TCvotes.end(); ++itvotes) {//should only be logged for this->view
+    //check second signature to verify its not in the collected signs yet
+    MsgTCRBF msg = (MsgTCRBF)*itvotes;
+    Sign TCvote = msg.signs.get(1);
+    TCvoteSigns.add(TCvote);
+  }
+
+
+  TC combination = TC(this->view, TCvoteSigns); // combine all TCs stored in this->log to form one TC
+  if (DEBUG1) std::cout << KBLU << nfo() << "TC combi "<< combination.prettyPrint() << KNRM << std::endl;
   QC quorumCertificate = callTEEleaderQuorumRBF(combination);
   //resulting just can be send to the others, along with QC to allow continuation of the protocol 
+  if (DEBUG1) std::cout << KBLU << nfo() << "quorum certificate "<< quorumCertificate.prettyPrint() << KNRM << std::endl;
 }
 
 // For backups to respond to TC messages received from leaders
@@ -4243,7 +4254,7 @@ void Handler::respondToQCRBF(MsgQCRBF msg){
   // verify QC, check if we still need it for that view/epoch or if we are already ahead
   // broadcast to all?
   if (DEBUG1) std::cout << KBLU << nfo() << "receiving QC for view " << msg.view << KNRM << std::endl;
-  QC qc(msg.getView(), msg.getSigns());
+  QC qc(msg.view, msg.signs);
   callTEEreceiveQCRBF(qc);
 }
 
