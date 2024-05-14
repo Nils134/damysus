@@ -3983,13 +3983,14 @@ TC Handler::callTEEreceiveTCRBF(TC justTC){//TODO: change
   return tc;
 }
 
-void Handler::callTEEreceiveQCRBF(QC justQC){//TODO: change
+int Handler::callTEEreceiveQCRBF(QC justQC){//TODO: change
   auto start = std::chrono::steady_clock::now();
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   qc_t qcin;
+  int inc = -1;
   setQC(justQC,&qcin);
   sgx_status_t ret;
-  sgx_status_t status = RBF_TEEreceiveQC(global_eid, &ret,&qcin);
+  sgx_status_t status = RBF_TEEreceiveQC(global_eid, &ret,&qcin, &inc);
 #else
   Just just = tr.TEEstore(stats,this->nodes,j);
 #endif
@@ -3997,6 +3998,7 @@ void Handler::callTEEreceiveQCRBF(QC justQC){//TODO: change
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
   stats.addTEEstore(time);
   stats.addTEEtime(time);
+  return inc;
 }
 
 TC Handler::callTEEleaderWishRBF(Wish wish) {
@@ -4261,9 +4263,11 @@ void Handler::respondToTCRBF(MsgTCRBF msg) {
 void Handler::respondToQCRBF(MsgQCRBF msg){
   // verify QC, check if we still need it for that view/epoch or if we are already ahead
   // broadcast to all?
-  if (DEBUG1) std::cout << KBLU << nfo() << "receiving QC for view " << msg.view << KNRM << std::endl;
+  if (DEBUG1) std::cout << KBLU << nfo() << "receiving MsgQC for view " << msg.view << KNRM << std::endl;
   QC qc(msg.view, msg.signs);
-  callTEEreceiveQCRBF(qc);
+ if (DEBUG1) std::cout << KBLU << nfo() << "Attempt epoch change with " << qc.prettyPrint() << KNRM << std::endl;
+  int epochsucces = callTEEreceiveQCRBF(qc);
+  if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
 }
 
 void Handler::handle_newviewrbf(MsgNewViewRBF msg, const PeerNet::conn_t &conn) {

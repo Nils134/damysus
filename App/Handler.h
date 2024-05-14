@@ -431,7 +431,7 @@ class Handler {
   Wish callTEEWishRBF();
   Recovery callTEErecoveryRBF();
   TC callTEEreceiveTCRBF(TC justTC);
-  void callTEEreceiveQCRBF(QC QC); //epoch config complete
+  int callTEEreceiveQCRBF(QC QC); //epoch config complete
 
   TC callTEEleaderWishRBF(Wish wish);
   QC callTEEleaderQuorumRBF(TC tc);

@@ -254,13 +254,14 @@ sgx_status_t RBF_TEEleaderCreateQuorum(tc_t *tc, qc_t *qc) { //TODO: check compa
   return status;
 }
 
-sgx_status_t RBF_TEEreceiveQC(qc_t *qc) {
+sgx_status_t RBF_TEEreceiveQC(qc_t *qc, int *incremented) {
   //Also check for qc validity
   sgx_status_t status = SGX_SUCCESS;//
-  if (qc->view == RBFview +1
-      && RBFview%getQsize() == 0) {//new epoch
-    RBF_increment();;
-  } else { }
+  if (qc->view+ 1 == RBFview && 
+      qc->signs.size >= getQsize()) {//new epoch
+    RBF_increment();
+    *incremented = 1;
+  } else { *incremented = RBFview;}
   return status;
 }
 

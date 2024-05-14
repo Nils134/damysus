@@ -38,7 +38,7 @@ enclave {
         public sgx_status_t RBF_TEEwish([out] wish_t *res);
         public sgx_status_t RBF_TEErecovery([out] recovery_t *res);
         
-        public sgx_status_t RBF_TEEreceiveQC([in] qc_t *qc);
+        public sgx_status_t RBF_TEEreceiveQC([in] qc_t *qc, [out] int *incremented);
         public sgx_status_t RBF_TEEreceiveTC([in] tc_t *tc, [out] tc_t *res);
 
         public sgx_status_t RBF_TEEleaderWish([in] wish_t *wish, [out] tc_t *res);
