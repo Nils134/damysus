@@ -42,7 +42,7 @@ enclave {
         public sgx_status_t RBF_TEEreceiveTC([in] tc_t *tc, [out] tc_t *res);
 
         public sgx_status_t RBF_TEEleaderWish([in] wish_t *wish, [out] tc_t *res);
-        public sgx_status_t RBF_TEEleaderCreateQuorum([in] hash_t *hash, [in] accum_t *acc, [in] tc_t *tc, [out] just_t *res);
+        public sgx_status_t RBF_TEEleaderCreateQuorum([in] hash_t *hash, [in] accum_t *acc, [in] tc_t *tc, [out] qc_t *qc);
         
         public sgx_status_t RBF_TEEattemptrollback([in] just_t *just);
 
