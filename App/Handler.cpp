@@ -1108,6 +1108,11 @@ void Handler::sendMsgTCRBF(MsgTCRBF msg, Peers recipients) {
   if (DEBUGT) printNowTime("sending MsgTCRBF");
 }
 
+void Handler::sendMsgQCRBF(MsgQCRBF msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgQCRBF");
+}
 
 void Handler::sendMsgNewViewFree(MsgNewViewFree msg, Peers recipients) {
   if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
@@ -4219,6 +4224,9 @@ void Handler::createQCRBF() {
   QC quorumCertificate = callTEEleaderQuorumRBF(combination);
   //resulting just can be send to the others, along with QC to allow continuation of the protocol 
   if (DEBUG1) std::cout << KBLU << nfo() << "quorum certificate "<< quorumCertificate.prettyPrint() << KNRM << std::endl;
+  Peers recipients = remove_from_peers(this->myid);
+  MsgQCRBF msg(quorumCertificate.getView(), quorumCertificate.getSigns());
+  sendMsgQCRBF(msg, recipients)
 }
 
 // For backups to respond to TC messages received from leaders
