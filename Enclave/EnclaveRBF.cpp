@@ -29,7 +29,7 @@ just_t RBF_sign(hash_t h1, hash_t h2, View v2) {
   sign_t sign = signString(rdata2string(rdata));
   signs_t signs; signs.size = 1; signs.signs[0] = sign;
   just_t j; j.set=0; j.rdata = rdata; j.signs = signs;
-  if (v2%getQsize() != 0 || v2 ==0) { //regular view
+  if (v2%getQsize() != 0 || v2 == 0) { //regular view
     j.set = 1;
     RBF_increment();
   }
@@ -257,8 +257,8 @@ sgx_status_t RBF_TEEleaderCreateQuorum(tc_t *tc, qc_t *qc) { //TODO: check compa
 sgx_status_t RBF_TEEreceiveQC(qc_t *qc, int *incremented) {
   //Also check for qc validity
   sgx_status_t status = SGX_SUCCESS;//
-  if (qc->view+ 1 == RBFview && 
-      qc->signs.size >= getQsize()) {//new epoch
+  if (qc->view == RBFview //&& qc->signs.size >= getQsize()
+      ) {//new epoch
     RBF_increment();
     *incremented = 1;
   } else { *incremented = RBFview;}

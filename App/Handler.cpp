@@ -3987,7 +3987,7 @@ int Handler::callTEEreceiveQCRBF(QC justQC){//TODO: change
   auto start = std::chrono::steady_clock::now();
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   qc_t qcin;
-  int inc = -1;
+  int inc = 100000;
   setQC(justQC,&qcin);
   sgx_status_t ret;
   sgx_status_t status = RBF_TEEreceiveQC(global_eid, &ret,&qcin, &inc);
@@ -4226,9 +4226,13 @@ void Handler::createQCRBF() {
   QC quorumCertificate = callTEEleaderQuorumRBF(combination);
   //resulting just can be send to the others, along with QC to allow continuation of the protocol 
   if (DEBUG1) std::cout << KBLU << nfo() << "quorum certificate "<< quorumCertificate.prettyPrint() << KNRM << std::endl;
-  Peers recipients = remove_from_peers(this->myid);
-  MsgQCRBF msg(quorumCertificate.getView(), quorumCertificate.getSigns());
-  sendMsgQCRBF(msg, recipients);
+  if (quorumCertificate.getSigns().getSize() > 0)  {
+    Peers recipients = remove_from_peers(this->myid);
+    MsgQCRBF msg(quorumCertificate.getView(), quorumCertificate.getSigns());
+    sendMsgQCRBF(msg, recipients);
+    Peers own = keep_from_peers(this->myid);
+    sendMsgQCRBF(msg, own);
+  }
 }
 
 // For backups to respond to TC messages received from leaders
@@ -4266,6 +4270,7 @@ void Handler::respondToQCRBF(MsgQCRBF msg){
   if (DEBUG1) std::cout << KBLU << nfo() << "receiving MsgQC for view " << msg.view << KNRM << std::endl;
   QC qc(msg.view, msg.signs);
  if (DEBUG1) std::cout << KBLU << nfo() << "Attempt epoch change with " << qc.prettyPrint() << KNRM << std::endl;
+  
   int epochsucces = callTEEreceiveQCRBF(qc);
   if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
 }
