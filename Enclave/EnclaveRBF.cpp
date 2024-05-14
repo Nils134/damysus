@@ -241,8 +241,16 @@ sgx_status_t RBF_TEEleaderWish(wish_t *wish, tc_t *res) {
 //Collect TC votes and create a quorum for next epoch
 sgx_status_t RBF_TEEleaderCreateQuorum(tc_t *tc, qc_t *qc) { //TODO: check comparison with TC creation
   sgx_status_t status = SGX_SUCCESS;
+  bool set = true;
   //receive TC votes and send QC for next epoch to all TEEs
-  
+  if (tc->signs.size >= getQsize()) {
+    qc->set = 1;
+    qc->view = tc->view;
+    std::string text = std::to_string(set) +  std::to_string(RBFview) + std::to_string(RBFprepv);
+    sign_t sign = signString(text);
+    qc->signs.size = 1;
+    qc->signs.signs[0] = sign;
+  }
   return status;
 }
 
