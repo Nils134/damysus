@@ -364,18 +364,14 @@ Wish getWish(wish_t *w) {
 TC getTC(tc_t *t) {
   View view = t->view;
   Sign  a[MAX_NUM_SIGNATURES];
-  for (int i = 0; i < 3; i++) {
-    if (DEBUG1) std::cout << KBLU  << "getTCname " << t->signs.signs[i].set << " , signer " << t->signs.signs[i].signer << KNRM << std::endl;
-  }
   for (int i = 0; i < MAX_NUM_SIGNATURES; i++) {
     a[i]=Sign(t->signs.signs[i].set,t->signs.signs[i].signer,t->signs.signs[i].sign);
   }
   Signs signs(t->signs.size,a);
-  if (DEBUG1) std::cout << KBLU  << "getTC" << signs.prettyPrint() << KNRM << std::endl;
   return TC(view, signs);
 }
 
-QC getQC(qc_t *q) {
+QC getQC(qc_t *q) { //TODO: check validity compared to TC
   View view = q->view;
   Sign  a[MAX_NUM_SIGNATURES];
   for (int i = 0; i < MAX_NUM_SIGNATURES; i++) {
@@ -623,6 +619,7 @@ const uint8_t MsgPreCommitRBF::opcode;
 const uint8_t MsgWishRBF::opcode;
 const uint8_t MsgRecoveryRBF::opcode;
 const uint8_t MsgTCRBF::opcode;
+const uint8_t MsgQCRBF::opcode;
 #endif
 
 const uint8_t MsgTransaction::opcode;
@@ -788,6 +785,7 @@ pnet(pec,pconf), cnet(cec,cconf) {
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_wishrbf,       this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_recoveryrbf,   this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_tcrbf,         this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_qcrbf,         this, _1, _2));
 #else
   std::cout << KRED << nfo() << "TODO" << KNRM << std::endl;
 #endif
@@ -4020,6 +4018,27 @@ TC Handler::callTEEleaderWishRBF(Wish wish) {
   return tc;
 }
 
+QC Handler::callTEEleaderQuorumRBF(Hash h, Accum acc, TC tc) {
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  qc_t qcout;
+  tc_t tcin;
+  hash_t hashin;
+  accum_t accumin;
+  setTC(tc, &tcin);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEleaderCreateQuorum(global_eid, &ret, &hashin, &accumin, &tcin, &qcout);
+  QC qc = getQC(&qcout);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEstore(time);
+  stats.addTEEtime(time);
+  return qc;
+}
+
 
 void Handler::handleNewviewRBF(MsgNewViewRBF msg){
   auto start = std::chrono::steady_clock::now();
@@ -4188,7 +4207,14 @@ void Handler::createTCRBF() {
 // After a sufficient amount of TC confirmations, create a QC with the collected nonces
 // Send to all participants
 void Handler::createQCRBF() {
-
+  //append all TCs into one TC
+  //supply hash, accum, (similar to TEEprepare) and the acquired TC
+  if (DEBUG1) std::cout << KBLU << nfo() << "creating quorum certificate" << KNRM << std::endl;
+  TC combination = TC(); // combine all TCs stored in this->log to form one TC
+  Hash temp = Hash();
+  Accum acc = Accum();
+  QC quorumCertificate = callTEEleaderQuorumRBF(temp, acc, combination);
+  //resulting just can be send to the others, along with QC to allow continuation of the protocol 
 }
 
 // For backups to respond to TC messages received from leaders
@@ -4197,7 +4223,7 @@ void Handler::respondToTCRBF(MsgTCRBF msg) {
   // check validity of message given view
   // if not signed yet, sign the view and reply to the sender of the TC (should be first of Signs vector)
   if (msg.view%this->qsize == 0) { //start of epoch
-    if (amEpochLeaderOf(msg.view, msg.signs.get(0).getSigner()) && msg.signs.get(0).getSigner() != this->myid ) { //sender is a leader within that epoch
+    if (amEpochLeaderOf(msg.view, msg.signs.get(0).getSigner()) && msg.signs.get(0).getSigner() != this->myid) { //sender is a leader within that epoch
       TC input(msg.view, msg.signs);
       TC res = callTEEreceiveTCRBF(input);
       if (DEBUG1) std::cout << KBLU << nfo() << "TC res" << res.prettyPrint() << KNRM << std::endl;
@@ -4212,6 +4238,7 @@ void Handler::respondToTCRBF(MsgTCRBF msg) {
       if (value == this->qsize) {
         //Create QC in TEE
         if (DEBUG1) std::cout << KBLU << nfo() << "QC size reached" << KNRM << std::endl;
+        createQCRBF();
       }
     }
   }
@@ -4220,7 +4247,9 @@ void Handler::respondToTCRBF(MsgTCRBF msg) {
 
 // For backups to respond to QC messages received from leaders
 void Handler::respondToQCRBF(MsgQCRBF msg){
-  
+  // verify QC, check if we still need it for that view/epoch or if we are already ahead
+  // broadcast to all?
+  if (DEBUG1) std::cout << KBLU << nfo() << "receiving QC for view " << msg.view << KNRM << std::endl;
 }
 
 void Handler::handle_newviewrbf(MsgNewViewRBF msg, const PeerNet::conn_t &conn) {
@@ -4254,8 +4283,13 @@ void Handler::handle_recoveryrbf(MsgRecoveryRBF msg, const PeerNet::conn_t &conn
 }
 
 void Handler::handle_tcrbf(MsgTCRBF msg, const PeerNet::conn_t &conn){
-  if (DEBUGT) printNowTime("handling MsgRecoveryRBF");
+  if (DEBUGT) printNowTime("handling MsgTCRBF");
   respondToTCRBF(msg);
+}
+
+void Handler::handle_qcrbf(MsgQCRBF msg, const PeerNet::conn_t &conn){
+  if (DEBUGT) printNowTime("handling MsgQCRBF");
+  respondToQCRBF(msg);
 }
 
 

@@ -433,7 +433,7 @@ class Handler {
   Just callTEEreceiveQCRBF(QC QC, Hash h, Accum acc); //epoch config complete, should return a TEEprepare that indicates permission
 
   TC callTEEleaderWishRBF(Wish wish);
-  QC callTEEleaderQuorumRBF();
+  QC callTEEleaderQuorumRBF(Hash h, Accum a, TC tc);
 
   void callTEEattemptrollbackRBF(Just j);
 
@@ -455,7 +455,7 @@ class Handler {
   void handle_wishrbf(MsgWishRBF msg, const PeerNet::conn_t &conn);
   void handle_recoveryrbf(MsgRecoveryRBF msg, const PeerNet::conn_t &conn);
   void handle_tcrbf(MsgTCRBF msg, const PeerNet::conn_t &conn);
-
+  void handle_qcrbf(MsgQCRBF msg, const PeerNet::conn_t &conn);
 
   // ------------------------------------------------------------
   // Free
