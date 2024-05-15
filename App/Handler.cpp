@@ -3860,6 +3860,7 @@ Accum Handler::callTEEaccumRBFSp(just_t just){
 }
 
 Just Handler::callTEEsignRBF(){
+  if (DEBUG1) std::cout << KMAG << nfo() << " call TEE sign" << this->view  << KNRM << std::endl;
   auto start = std::chrono::steady_clock::now();
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
@@ -4272,10 +4273,11 @@ void Handler::respondToQCRBF(MsgQCRBF msg){
   if (DEBUG1) std::cout << KBLU << nfo() << "receiving MsgQC for view " << msg.view << KNRM << std::endl;
   QC qc(msg.view, msg.signs);
   if (DEBUG1) std::cout << KBLU << nfo() << "Attempt epoch change with " << qc.prettyPrint() << KNRM << std::endl;
-  
-  if (this->log.storeQCRBF(msg) == 1) {
-    int epochsucces = callTEEreceiveQCRBF(qc);
-    if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
+  if (qc.getSigns().getSize() > 0) {
+    if (this->log.storeQCRBF(msg) == 1) {
+      int epochsucces = callTEEreceiveQCRBF(qc);
+      if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
+    }
   }
 
 }
