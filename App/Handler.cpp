@@ -4273,7 +4273,7 @@ void Handler::respondToQCRBF(MsgQCRBF msg){
   QC qc(msg.view, msg.signs);
   if (DEBUG1) std::cout << KBLU << nfo() << "Attempt epoch change with " << qc.prettyPrint() << KNRM << std::endl;
   
-  if (this->log.storeQCRBF() == 1) {
+  if (this->log.storeQCRBF(msg) == 1) {
     int epochsucces = callTEEreceiveQCRBF(qc);
     if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
   }
