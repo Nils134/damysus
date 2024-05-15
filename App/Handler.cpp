@@ -3932,7 +3932,7 @@ void Handler::callTEEattemptrollbackRBF(Just j){
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-  stats.addTEEstore(time);
+  stats.addTEEepoch(time);
   stats.addTEEtime(time);
 }
 
@@ -3948,7 +3948,7 @@ Wish Handler::callTEEWishRBF(){
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-  stats.addTEEstore(time);
+  stats.addTEEepoch(time);
   stats.addTEEtime(time);
   return wish;
 }
@@ -3965,7 +3965,7 @@ Recovery Handler::callTEErecoveryRBF(){
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-  stats.addTEEstore(time);
+  stats.addTEEepoch(time);
   stats.addTEEtime(time);
   return rec;
 }
@@ -3984,7 +3984,7 @@ TC Handler::callTEEreceiveTCRBF(TC justTC){//TODO: change
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-  stats.addTEEstore(time);
+  stats.addTEEepoch(time);
   stats.addTEEtime(time);
   return tc;
 }
@@ -4002,7 +4002,7 @@ int Handler::callTEEreceiveQCRBF(QC justQC){//TODO: change
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-  stats.addTEEstore(time);
+  stats.addTEEepoch(time);
   stats.addTEEtime(time);
   return inc;
 }
@@ -4021,7 +4021,7 @@ TC Handler::callTEEleaderWishRBF(Wish wish) {
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-  stats.addTEEstore(time);
+  stats.addTEEepoch(time);
   stats.addTEEtime(time);
   return tc;
 }
@@ -4040,7 +4040,7 @@ QC Handler::callTEEleaderQuorumRBF(TC tc) {
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-  stats.addTEEstore(time);
+  stats.addTEEepoch(time);
   stats.addTEEtime(time);
   return qc;
 }
