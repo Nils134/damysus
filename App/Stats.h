@@ -25,6 +25,7 @@ private:
   std::multiset<double> viewTimes;
   std::multiset<double> prepTimes;
   std::multiset<double> nvTimes;
+  std::multiset<double> epochTimes;
 
   unsigned int id        = 0;
   unsigned int execViews = 0;
@@ -35,6 +36,7 @@ private:
   double TEEstore        = 0.0;
   double TEEaccum        = 0.0;
   double TEEtime         = 0.0;
+  double TEEepoch        = 0.0;
 
   unsigned int cryptoSignNum  = 0;
   unsigned int cryptoVerifNum = 0;
@@ -59,6 +61,7 @@ public:
   void addTEEstore(double v);
   void addTEEaccum(double v);
   void addTEEtime(double v);
+  void addTEEepoch(double v);
 
   void addCryptoSignTime(double v);
   void addCryptoVerifTime(double v);

@@ -10,6 +10,7 @@ Stats::Stats() {
   this->TEEstore   = 0.0;
   this->TEEaccum   = 0.0;
   this->TEEtime    = 0.0;
+  this->TEEepoch   = 0.0;
 
   this->cryptoSignNum  = 0;
   this->cryptoVerifNum = 0;
@@ -31,6 +32,7 @@ void Stats::addTEEprepare(double v) { this->TEEprepare += v; }
 void Stats::addTEEstore(double v)   { this->TEEstore   += v; }
 void Stats::addTEEaccum(double v)   { this->TEEaccum   += v; }
 void Stats::addTEEtime(double v)    { this->TEEtime    += v; }
+void Stats::addTEEepoch(double v)   { this->TEEepoch   += v; }
 
 void Stats::addCryptoSignTime(double v)  { this->cryptoSignNum  += 1; this->cryptoSignTime  += v; }
 void Stats::addCryptoVerifTime(double v) { this->cryptoVerifNum += 1; this->cryptoVerifTime += v; }
