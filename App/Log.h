@@ -39,6 +39,7 @@ class Log {
   std::map<View,std::set<MsgWishRBF>> wishRBF;
   std::map<View,std::set<MsgRecoveryRBF>> recoveryRBF;
   std::map<View,std::set<MsgTCRBF>> TCRBF;
+  std::map<View,std::set<MsgQCRBF>> QCRBF;
 
 
   std::map<View,std::set<MsgNewViewFree>> newviewsFree;
@@ -92,6 +93,7 @@ class Log {
   unsigned int storeWishRBF(MsgWishRBF msg);
   unsigned int storeRecoveryRBF(MsgRecoveryRBF msg);
   unsigned int storeTCRBF(MsgTCRBF msg);
+  unsigned int storeQCRBF(MsgQCRBF msg);
 
   unsigned int storeNvFree(MsgNewViewFree msg);
   unsigned int storePrepFree(PJust msg);

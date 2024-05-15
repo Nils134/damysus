@@ -257,7 +257,7 @@ sgx_status_t RBF_TEEleaderCreateQuorum(tc_t *tc, qc_t *qc) { //TODO: check compa
 sgx_status_t RBF_TEEreceiveQC(qc_t *qc, int *incremented) {
   //Also check for qc validity
   sgx_status_t status = SGX_SUCCESS;//
-  if (qc->view == RBFview //&& qc->signs.size >= getQsize()
+  if (qc->view == RBFview 
       ) {//new epoch
     RBF_increment();
     *incremented = 1;

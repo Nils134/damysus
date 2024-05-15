@@ -562,6 +562,7 @@ void Handler::startNewViewOnTimeout() {
 #elif defined (CHAINED_CHEAP_AND_QUICK)
   startNewViewChComb();
 #elif defined (ROLLBACK_FAULTY_PROTECTED)
+  if (DEBUG1) std::cout << KMAG << nfo() << "new view timeout " << this->view << KNRM << std::endl;
   startNewViewRBF();
 #else
   recordStats();
@@ -3668,6 +3669,7 @@ void Handler::startNewViewRBF() {
     }
   } else {
     // Something wrong happened
+    if (DEBUG1) std::cout << KMAG << nfo() << "new view failure !!!" << KNRM << std::endl;
   }
 }
 
@@ -4269,10 +4271,13 @@ void Handler::respondToQCRBF(MsgQCRBF msg){
   // broadcast to all?
   if (DEBUG1) std::cout << KBLU << nfo() << "receiving MsgQC for view " << msg.view << KNRM << std::endl;
   QC qc(msg.view, msg.signs);
- if (DEBUG1) std::cout << KBLU << nfo() << "Attempt epoch change with " << qc.prettyPrint() << KNRM << std::endl;
+  if (DEBUG1) std::cout << KBLU << nfo() << "Attempt epoch change with " << qc.prettyPrint() << KNRM << std::endl;
   
-  int epochsucces = callTEEreceiveQCRBF(qc);
-  if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
+  if (this->log.storeQCRBF() == 1) {
+    int epochsucces = callTEEreceiveQCRBF(qc);
+    if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
+  }
+
 }
 
 void Handler::handle_newviewrbf(MsgNewViewRBF msg, const PeerNet::conn_t &conn) {
