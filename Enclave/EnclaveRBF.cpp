@@ -7,7 +7,7 @@ View   RBFprepv = 0;             // preph's view
 View   RBFview  = 0;             // current view
 Phase1 RBFphase = PH1_NEWVIEW;   // current phase
 uint32_t nonce = 0;                 // nonce to uniquely identify TEEs with the same keypair
-
+View qcReceived = 0;
 
 
 // increments the (view,phase) pair
@@ -35,6 +35,10 @@ just_t RBF_sign(hash_t h1, hash_t h2, View v2) {
   }
   else { // start of an epoch
     j.set = 0;
+    if (rdata.propv - qcReceived < getQsize()) {
+      j.set = 1;
+      RBF_increment();
+    }
   }
   
   return j;
@@ -257,9 +261,9 @@ sgx_status_t RBF_TEEleaderCreateQuorum(tc_t *tc, qc_t *qc) { //TODO: check compa
 sgx_status_t RBF_TEEreceiveQC(qc_t *qc, int *incremented) {
   //Also check for qc validity
   sgx_status_t status = SGX_SUCCESS;//
-  if (qc->view == RBFview 
+  if (qc->view >= qcReceived
       ) {//new epoch
-    RBF_increment();
+    qcReceived = qc->view;
     *incremented = 1;
   } else { *incremented = RBFview;}
   return status;

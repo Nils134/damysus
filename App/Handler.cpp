@@ -3628,7 +3628,10 @@ void Handler::handleEarlierMessagesRBF(){
 void Handler::startNewViewRBF() {
   Just just = callTEEsignRBF();
   // generate justifications until we can generate one for the next view
-  while (just.getRData().getPropv() <= this->view) { just = callTEEsignRBF(); }
+  while (just.getRData().getPropv() <= this->view ) { 
+    just = callTEEsignRBF(); 
+    if (DEBUG1) std::cout << KBLU << nfo() << "justTEESign" << just.prettyPrint() << KNRM << std::endl;
+  }
   // increment the view
   // *** THE NODE HAS NOW MOVED TO THE NEW-VIEW ***
   this->view++;
@@ -4233,8 +4236,12 @@ void Handler::createQCRBF() {
     Peers recipients = remove_from_peers(this->myid);
     MsgQCRBF msg(quorumCertificate.getView(), quorumCertificate.getSigns());
     sendMsgQCRBF(msg, recipients);
-    Peers own = keep_from_peers(this->myid);
-    sendMsgQCRBF(msg, own);
+    if (quorumCertificate.getSigns().getSize() > 0) {
+    if (this->log.storeQCRBF(msg) == 1) {
+      int epochsucces = callTEEreceiveQCRBF(quorumCertificate);
+      if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
+    }
+  }
   }
 }
 
@@ -4272,9 +4279,11 @@ void Handler::respondToQCRBF(MsgQCRBF msg){
   // broadcast to all?
   if (DEBUG1) std::cout << KBLU << nfo() << "receiving MsgQC for view " << msg.view << KNRM << std::endl;
   QC qc(msg.view, msg.signs);
-  if (DEBUG1) std::cout << KBLU << nfo() << "Attempt epoch change with " << qc.prettyPrint() << KNRM << std::endl;
+  if (DEBUG1) std::cout << KBLU << nfo() << "Attempt epoch change with " << qc.prettyPrint() << " , on " << this->view << KNRM << std::endl;
   if (qc.getSigns().getSize() > 0) {
-    if (this->log.storeQCRBF(msg) == 1) {
+    int storageSize = this->log.storeQCRBF(msg);
+    if (DEBUG1) std::cout << KBLU << nfo() << "sig size good, storage " << storageSize  << KNRM << std::endl;
+    if (storageSize == 1) {
       int epochsucces = callTEEreceiveQCRBF(qc);
       if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
     }

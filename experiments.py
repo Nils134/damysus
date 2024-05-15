@@ -48,7 +48,7 @@ faults       = [1] #[1,2,4,10] #[1,2,4,10,20,30,40] #[1,2,4,6,8,10,12,14,20,30] 
 repeats      = 100 #10 #50 #5 #100 #2     # number of times to repeat each experiment
 repeatsL2    = 1
 #
-numViews     = 5     # number of views in each run
+numViews     = 12     # number of views in each run
 cutOffBound  = 300     # stop experiment after some time
 #
 numClients   = 1     # number of clients
@@ -56,7 +56,7 @@ numNonChCls  = 1     # number of clients for the non-chained versions
 numChCls     = 1     # number of clients for the chained versions
 numClTrans   = 1     # number of transactions sent by each clients
 sleepTime    = 0     # time clients sleep between 2 sends (in microseconds)
-timeout      = 5     # timeout before changing changing leader (in seconds)
+timeout      = 15     # timeout before changing changing leader (in seconds)
 #
 numTrans      = 400    # number of transactions
 payloadSize   = 0 #256 #0 #256 #128      # total size of a transaction
