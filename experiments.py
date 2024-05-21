@@ -2509,7 +2509,7 @@ def createPlot(pFile):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsTVRBF, valsTVRBF, numsTVRBF):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
-                    for x,y,z in zip(faultsTVROTE, valsTVROTE, numsTVRote):
+                    for x,y,z in zip(faultsTVROTE, valsTVROTE, numsTVROTE):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                 if plotChained:
                     for x,y,z in zip(faultsTVChBase, valsTVChBase, numsTVChBase):
