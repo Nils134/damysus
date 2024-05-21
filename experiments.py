@@ -345,7 +345,7 @@ class Protocol(Enum):
     CHBASE    = "CHAINED_BASELINE"         # chained baseline
     CHCOMB    = "CHAINED_CHEAP_AND_QUICK"  # chained Damysus
     RBF       = "ROLLBACK_FAULTY_PROTECTED"# only faulty replicas are assumed to attempt rollbacks
-    ROTE      = "ROTE_PROTECTED"           # Imaginary ROTE implementation
+    ROTE      = "ROTE_PROTECTED"           # ROTE simulation
 
     ## Debug versions
     QUICKDBG  = "BASIC_QUICK_DEBUG"
@@ -2823,7 +2823,7 @@ def runExperiments():
         else:
             (0.0,0.0,0.0,0.0)
         # Rollback Faulty
-        if runRBF:
+        if runROTE:
             print("compute avg stats for ROTE")
             computeAvgStats(recompile,protocol=Protocol.ROTE,constFactor=2,numClTrans=numClTrans,sleepTime=sleepTime,numViews=numViews,cutOffBound=cutOffBound,numFaults=numFaults,numRepeats=repeats)
         else:
@@ -3972,6 +3972,9 @@ elif args.containers:
         fact = 2
     elif args.p9:
         prop = Protocol.RBF
+        fact = 2
+    elif args.p10:
+        prop = Protocol.ROTE
         fact = 2
     else:
         prop = Protocol.ONEP
