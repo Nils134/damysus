@@ -2822,6 +2822,12 @@ def runExperiments():
             computeAvgStats(recompile,protocol=Protocol.RBF,constFactor=2,numClTrans=numClTrans,sleepTime=sleepTime,numViews=numViews,cutOffBound=cutOffBound,numFaults=numFaults,numRepeats=repeats)
         else:
             (0.0,0.0,0.0,0.0)
+        # Rollback Faulty
+        if runRBF:
+            print("compute avg stats for ROTE")
+            computeAvgStats(recompile,protocol=Protocol.ROTE,constFactor=2,numClTrans=numClTrans,sleepTime=sleepTime,numViews=numViews,cutOffBound=cutOffBound,numFaults=numFaults,numRepeats=repeats)
+        else:
+            (0.0,0.0,0.0,0.0)
 
     print("num complete runs=", completeRuns)
     print("num aborted runs=", abortedRuns)
@@ -2929,6 +2935,10 @@ def createTVLplot(cFile,instances):
     LRoBF = [] #inconsistent due to keyword LRBF
     TRoBF = []
     aRoBF = []
+    
+    LROTEe = [] #inconsistent due to keyword LRBF
+    TROTEe = []
+    aROTEe = []
 
     print("reading points from:", cFile)
     f = open(cFile,'r')
@@ -2988,6 +2998,10 @@ def createTVLplot(cFile,instances):
                 TRoBF.append(throughput)
                 LRoBF.append(latency)
                 aRoBF.append(sleep)
+            if protVal == "ROTE_PROTECTED":
+                TROTEe.append(throughput)
+                LROTEe.append(latency)
+                aROTEe.append(sleep)
 
     LW = 1 # linewidth
     MS = 5 # markersize
@@ -3007,7 +3021,6 @@ def createTVLplot(cFile,instances):
 
     plt.xlabel("throughput (Kops/sec)", fontsize=12)
     plt.ylabel("latency (ms)", fontsize=12)
-    #TODO: add plotting for RBF here, if values are appended
     if plotBasic:
         if len(TBase) > 0:
             plt.plot(TBase,   LBase,   color=baseCOL,   linewidth=LW, marker=baseMRK,   markersize=MS, linestyle=baseLS,   label=baseHS)
@@ -3023,6 +3036,8 @@ def createTVLplot(cFile,instances):
             plt.plot(TOnep,   LOnep,   color=onepCOL,   linewidth=LW, marker=onepMRK,   markersize=MS, linestyle=onepLS,   label=onepHS)
         if len(TRoBF) > 0:
             plt.plot(TRoBF,   LRoBF,   color=RoBFCOL,   linewidth=LW, marker=RoBFMRK,   markersize=MS, linesytel=RoBFLS,   label=RoBFHS)
+        if len(TROTEe) > 0:
+            plt.plot(TROTEe,   LROTEe,   color=ROTECOL,   linewidth=LW, marker=ROTEMRK,   markersize=MS, linesytel=ROTELS,   label=ROTEHS)
     if plotChained:
         if len(TChBase) > 0:
             plt.plot(TChBase, LChBase, color=baseChCOL, linewidth=LW, marker=baseChMRK, markersize=MS, linestyle=baseChLS, label=baseChHS)
@@ -3043,6 +3058,8 @@ def createTVLplot(cFile,instances):
             for x,y,z in zip(TOnep, LOnep, aOnep):
                 plt.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
             for x,y,z in zip(TRoBF, LRoBF, aRoBF):
+                plt.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
+            for x,y,z in zip(TROTEe, LROTEe, aROTEe):
                 plt.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
         if plotChained:
             for x,y,z in zip(TChBase, LChBase, aChBase):
@@ -3515,7 +3532,7 @@ def TVLaws():
 # End of TVLaws
 
 
-def copyLatestExperiments(): #TODO: add RBF to methods
+def copyLatestExperiments(): 
     global plotFile
     global tvlFile
     global plotBasic
@@ -3690,6 +3707,7 @@ parser.add_argument("--p6",         action="store_true",   help="sets runChComb 
 parser.add_argument("--p7",         action="store_true",   help="sets runFree to True (hash&signature-free Damysus)")
 parser.add_argument("--p8",         action="store_true",   help="sets runOnep to True (1+1/2 phase Damysus)")
 parser.add_argument("--p9",         action="store_true",   help="sets runRBF to True (rollback protection within faulty replicas)")
+parser.add_argument("--p10",         action="store_true",   help="sets runROTE to True (ROTE simulation)")
 parser.add_argument("--pall",       action="store_true",   help="sets all runXXX to True, i.e., all protocols will be executed")
 parser.add_argument("--netlat",     type=int, default=0,   help="network latency in ms")
 parser.add_argument("--netvar",     type=int, default=0,   help="variation of the network latency in ms")
@@ -3877,6 +3895,10 @@ if args.p9:
     runRBF = True
     print("SUCCESFULLY PARSED ARGUMENT - testing rollback protected Damysus")
 
+if args.p10:
+    runROTE = True
+    print("SUCCESFULLY PARSED ARGUMENT - testing ROTE-Damysus simulation")
+
 if args.pall:
     runBase   = True
     runCheap  = True
@@ -3887,6 +3909,7 @@ if args.pall:
     runChBase = True
     runChComb = True
     runRBF    = True
+    runROTE   = True
     print("SUCCESSFULLY PARSED ARGUMENT - testing all protocols")
 
 
