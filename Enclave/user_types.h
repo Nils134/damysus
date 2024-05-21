@@ -251,5 +251,31 @@ typedef struct _opaccum_t
   auth_t auth;
 } opaccum_t;
 
+typedef struct _recovery_t {
+  bool set;
+  View view;
+  uint32_t nonce;
+  sign_t sign;
+} recovery_t;
+
+typedef struct _wish_t {
+  bool set;
+  View  view;
+  View recoveredView;
+  sign_t sign;
+} wish_t;
+
+typedef struct _tc_t {
+  bool set;
+  View  view;
+  signs_t signs;
+} tc_t;
+
+
+typedef struct _qc_t {
+  bool set;
+  View  view;
+  signs_t signs;
+} qc_t;
 
 #endif

@@ -1,13 +1,13 @@
 #include <set>
 #include "EnclaveShare.h"
-
-
+#include <string.h>
+ 
 hash_t RBFpreph = newHash(); // hash of the last prepared block
 View   RBFprepv = 0;             // preph's view
 View   RBFview  = 0;             // current view
 Phase1 RBFphase = PH1_NEWVIEW;   // current phase
-float nonce = 0;                 // nonce to uniquely identify TEEs with the same keypair
-
+uint32_t nonce = 0;                 // nonce to uniquely identify TEEs with the same keypair
+View qcReceived = 0;
 
 
 // increments the (view,phase) pair
@@ -28,9 +28,18 @@ just_t RBF_sign(hash_t h1, hash_t h2, View v2) {
   rdata.proph = h1; rdata.propv = RBFview; rdata.justh = h2; rdata.justv = v2; rdata.phase = RBFphase;
   sign_t sign = signString(rdata2string(rdata));
   signs_t signs; signs.size = 1; signs.signs[0] = sign;
-  just_t j; j.set = 1; j.rdata = rdata; j.signs = signs;
-
-  RBF_increment();
+  just_t j; j.set=0; j.rdata = rdata; j.signs = signs;
+  if (v2%getQsize() != 0 || v2 == 0) { //regular view
+    j.set = 1;
+    RBF_increment();
+  }
+  else { // start of an epoch
+    j.set = 0;
+    if (rdata.propv - qcReceived < getQsize()) {
+      j.set = 1;
+      RBF_increment();
+    }
+  }
   
   return j;
 }
@@ -54,7 +63,8 @@ sgx_status_t RBF_TEEprepare(hash_t *hash, accum_t *acc, just_t *res) {
 
   if (verifyAccum(acc)
       && RBFview == acc->view
-      && acc->size == getQsize()) {
+      && acc->size == getQsize()
+    ) {
     *res = RBF_sign(*hash,acc->hash,acc->prepv);
   } else { res->set = false; }
   return status;
@@ -118,7 +128,7 @@ sgx_status_t RBF_TEEaccum(onejusts_t *js, accum_t *res) {
   return status;
 }
 
-//TODO: log the MC values, and the message in runtime memory
+
 sgx_status_t RBF_TEEaccumSp(just_t *just, accum_t *res) {
   sgx_status_t status = SGX_SUCCESS;
 
@@ -156,35 +166,59 @@ sgx_status_t RBF_TEEaccumSp(just_t *just, accum_t *res) {
 // Every node functions
 
 //Allow for a recovery of the SGX enclave
-sgx_status_t RBF_TEErecovery(accum_t *acc, just_t *res) {
+sgx_status_t RBF_TEErecovery(recovery_t *res) {
   //set values to maximum value, if a quorum is reached.
   //ocall_print("TEEstore...");
   sgx_status_t status = SGX_SUCCESS;
+  bool set = true;
   //send message recovery(nonce, sign) to all leaders view, ..., view+f+u+1 of suspected view
-
+  res->set = 1;
+  res->view = RBFview;
+  res->nonce = nonce;
+  std::string text = std::to_string(set) +  std::to_string(RBFview) + std::to_string(nonce);
+  sign_t sign = signString(text);
+  res->sign = sign;
   return status;
 }
 
 //Create Wish function to craft message for all leader within an epoch
-sgx_status_t RBF_TEEwish() {
+sgx_status_t RBF_TEEwish(wish_t *res) {
   sgx_status_t status = SGX_SUCCESS;
+  bool set = true;
   //send message wish(view[self], sign) to all leaders view, ..., view+f+u+1
-
+  res->set = 1;
+  res->view = RBFview;
+  res->recoveredView = RBFprepv;
+  std::string text = std::to_string(set) +  std::to_string(RBFview) + std::to_string(RBFprepv);
+  sign_t sign = signString(text);
+  res->sign = sign;
   return status;
 }
 
 //Simulate receiving messages (similar to upon functions)
 
-sgx_status_t RBF_TEEreceiveTC() {
+sgx_status_t RBF_TEEreceiveTC(tc_t *tc, tc_t *res) {
   sgx_status_t status = SGX_SUCCESS;
   //send vote to a leader that sends a valid proposed TC
-
-  return status;
-}
-
-sgx_status_t RBF_TEEreceiveQC() {
-  sgx_status_t status = SGX_SUCCESS;
-  //send vote to a leader that sends a valid proposed QC
+  
+  //should validate sign to be legit
+  //should check if this is a valid epoch leader for that view. Methods for this defined in Handler class
+  bool set = true;
+  //send message wish(view[self], sign) to all leaders view, ..., view+f+u+1
+  res->set = 1;
+  res->view = tc->view;
+  
+  std::string text = std::to_string(set) +  std::to_string(res->view);
+  sign_t sign = signString(text);
+  for (int i = 0; i< tc->signs.size; i++ ) { //copy existing 
+    sign_t s;
+    s.set = tc->signs.signs[i].set;
+    s.signer = tc->signs.signs[i].signer;
+    memcpy(s.sign, tc->signs.signs[i].sign, SIGN_LEN);
+    res->signs.signs[i] = s;
+  }
+  res->signs.signs[tc->signs.size] = sign;
+  res->signs.size = tc->signs.size +1;
 
   return status;
 }
@@ -193,29 +227,57 @@ sgx_status_t RBF_TEEreceiveQC() {
 // LEADER FUNCTIONS
 
 //Collect wish and recover messages and create a TC
-sgx_status_t RBF_TEEleaderWish() {
+sgx_status_t RBF_TEEleaderWish(wish_t *wish, tc_t *res) {
   sgx_status_t status = SGX_SUCCESS;
+  bool set = true;
   //receive bunch of wish and recover messages, combine into TC and send to all TEEs
-
+  if (wish->view == RBFview) {//check if we are online 
+    res->set = 1;
+    res->view = RBFview;
+    std::string text = std::to_string(set) +  std::to_string(RBFview) + std::to_string(RBFprepv);
+    sign_t sign = signString(text);
+    res->signs.size = 1;
+    res->signs.signs[0] = sign;
+  }
   return status;
 }
 
 //Collect TC votes and create a quorum for next epoch
-sgx_status_t RBF_TEEleaderCreateQuorum() {
+sgx_status_t RBF_TEEleaderCreateQuorum(tc_t *tc, qc_t *qc) { //TODO: check comparison with TC creation
   sgx_status_t status = SGX_SUCCESS;
+  bool set = true;
   //receive TC votes and send QC for next epoch to all TEEs
-
+  if (tc->signs.size >= getQsize()) {
+    qc->set = 1;
+    qc->view = tc->view;
+    std::string text = std::to_string(set) +  std::to_string(RBFview) + std::to_string(RBFprepv);
+    sign_t sign = signString(text);
+    qc->signs.size = 1;
+    qc->signs.signs[0] = sign;
+  }
   return status;
 }
 
+sgx_status_t RBF_TEEreceiveQC(qc_t *qc, int *incremented) {
+  //Also check for qc validity
+  sgx_status_t status = SGX_SUCCESS;//
+  if (qc->view >= qcReceived
+      ) {//new epoch
+    qcReceived = qc->view;
+    *incremented = 1;
+  } else { *incremented = RBFview;}
+  return status;
+}
 
 //Rollback functionality 
 
 //create method to reset view and phase to earlier version or 0, 
 //simulating a rollback
-sgx_status_t RBF_TEEattemptrollback(View *v) {
+sgx_status_t RBF_TEEattemptrollback(just_t *just) {
   sgx_status_t status = SGX_SUCCESS;
   // reset values and create new nonce to simulate new TEE
+  nonce = 0;
+  RBFview = just->rdata.propv;
   return status;
 }
 

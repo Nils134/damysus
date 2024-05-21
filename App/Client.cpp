@@ -34,10 +34,13 @@ const uint8_t MsgLdrPrepareAcc::opcode;
 const uint8_t MsgPrepareAcc::opcode;
 const uint8_t MsgPreCommitAcc::opcode;
 #elif defined(ROLLBACK_FAULTY_PROTECTED)
-const uint8_t MsgNewViewComb::opcode;
-const uint8_t MsgLdrPrepareComb::opcode;
-const uint8_t MsgPrepareComb::opcode;
-const uint8_t MsgPreCommitComb::opcode;
+const uint8_t MsgNewViewRBF::opcode;
+const uint8_t MsgLdrPrepareRBF::opcode;
+const uint8_t MsgPrepareRBF::opcode;
+const uint8_t MsgPreCommitRBF::opcode;
+const uint8_t MsgWishRBF::opcode;
+const uint8_t MsgRecoveryRBF::opcode;
+const uint8_t MsgTCRBF::opcode;
 #else
 const uint8_t MsgNewView::opcode;
 const uint8_t MsgPrepare::opcode;

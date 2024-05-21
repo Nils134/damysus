@@ -3,3 +3,4 @@ stats/
 ./App/params.h
 .vscode
 *.txt
+!todos.txt

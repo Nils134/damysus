@@ -36,6 +36,11 @@ class Log {
   std::map<View,std::set<MsgPrepareRBF>> preparesRBF;
   std::map<View,std::set<MsgPreCommitRBF>> precommitsRBF;
   std::map<View,std::set<MsgLdrPrepareRBF>> ldrpreparesRBF;
+  std::map<View,std::set<MsgWishRBF>> wishRBF;
+  std::map<View,std::set<MsgRecoveryRBF>> recoveryRBF;
+  std::map<View,std::set<MsgTCRBF>> TCRBF;
+  std::map<View,std::set<MsgQCRBF>> QCRBF;
+
 
   std::map<View,std::set<MsgNewViewFree>> newviewsFree;
   std::map<View,std::tuple<PJust>> preparesFree;
@@ -85,7 +90,10 @@ class Log {
   unsigned int storePrepRBF(MsgPrepareRBF msg);
   unsigned int storePcRBF(MsgPreCommitRBF msg);
   unsigned int storeLdrPrepRBF(MsgLdrPrepareRBF msg);
-
+  unsigned int storeWishRBF(MsgWishRBF msg);
+  unsigned int storeRecoveryRBF(MsgRecoveryRBF msg);
+  unsigned int storeTCRBF(MsgTCRBF msg);
+  unsigned int storeQCRBF(MsgQCRBF msg);
 
   unsigned int storeNvFree(MsgNewViewFree msg);
   unsigned int storePrepFree(PJust msg);
@@ -149,6 +157,9 @@ class Log {
   std::set<MsgNewViewRBF> getNewViewRBF(View view, unsigned int n);
   Signs getPrepareRBF(View view, unsigned int n);
   Signs getPrecommitRBF(View view, unsigned int n);
+  std::set<MsgWishRBF> getWishRBF(View view, unsigned int n);
+  std::set<MsgRecoveryRBF> getRecoveryRBF(View view, unsigned int n);
+  std::set<MsgTCRBF> getTCRBF(View view, unsigned int n);
 
   MsgLdrPrepareRBF firstLdrPrepareRBF(View view);
   MsgPrepareRBF firstPrepareRBF(View view);
