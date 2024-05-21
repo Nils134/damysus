@@ -72,6 +72,7 @@ runOnep      = False #True
 runChBase    = False #True
 runChComb    = False #True
 runRBF       = False #True
+runROTE      = False #True
 
 # Debug versions
 runQuickDbg  = False #True
@@ -147,6 +148,7 @@ onepHS   = "OneP-Damysus"
 baseChHS = "Chained HotStuff"
 combChHS = "Chained-Damysus"
 RoBFHS   = "Rollback Faulty"
+ROTEHS   = "ROTE"
 
 # Markers
 baseMRK   = "P"
@@ -158,6 +160,7 @@ onepMRK   = "+"
 baseChMRK = "d"
 combChMRK = ">"
 RoBFMRK    = "^"
+ROTEMRK   =""
 
 # Line styles
 baseLS   = ":"
@@ -169,6 +172,7 @@ onepLS   = "-"
 baseChLS = ":"
 combChLS = "-"
 RoBFLS    = "-"
+ROTELS    = "-.."
 
 # Markers
 baseCOL   = "black"
@@ -180,6 +184,7 @@ onepCOL   = "brown"
 baseChCOL = "darkorange"
 combChCOL = "magenta"
 RoBFCOL    = "cyan"
+ROTECOL     = "pink"
 
 
 ## AWS parameters
@@ -340,6 +345,7 @@ class Protocol(Enum):
     CHBASE    = "CHAINED_BASELINE"         # chained baseline
     CHCOMB    = "CHAINED_CHEAP_AND_QUICK"  # chained Damysus
     RBF       = "ROLLBACK_FAULTY_PROTECTED"# only faulty replicas are assumed to attempt rollbacks
+    ROTE      = "ROTE_PROTECTED"           # Imaginary ROTE implementation
 
     ## Debug versions
     QUICKDBG  = "BASIC_QUICK_DEBUG"
@@ -830,7 +836,10 @@ def runAWS():
                 executeAWS(instanceRepIds=instanceRepIds,instanceClIds=instanceClIds,protocol=Protocol.CHCOMBDBG,constFactor=2,numClTrans=numClTrans,sleepTime=sleepTime,numViews=numViews,cutOffBound=cutOffBound,numFaults=numFaults)
             # ------
             if runRBF:
-                print("linked to --p9 correctly")
+                print("running RBF in AWS")
+            
+            if runROTE:
+                print("running ROTE in AWS")
             # ------
             # We now terminate all instances just in case
             #terminateAllInstances()
@@ -1259,8 +1268,10 @@ def runCluster():
         if runChCombDbg:
             executeCluster(info=info,protocol=Protocol.CHCOMBDBG,constFactor=2,numClTrans=numClTrans,sleepTime=sleepTime,numViews=numViews,cutOffBound=cutOffBound,numFaults=numFaults)
         if runRBF:
-            print("correctly initiated cluster execution")
+            print("initiating RBF execution cluster")
             #TODO: create proper executeCluster command
+        if runROTE:
+            print("initiating ROTE execution cluster")
 
     # cleanup
     for node in nodes:
@@ -1941,6 +1952,8 @@ def createPlot(pFile):
     dictTVChBase = {}
     dictTVChComb = {}
     dictTVRBF    = {}
+    dictTVROTE   = {}
+
     # latency-view
     dictLVBase   = {}
     dictLVCheap  = {}
@@ -1951,6 +1964,7 @@ def createPlot(pFile):
     dictLVChBase = {}
     dictLVChComb = {}
     dictLVRBF    = {}
+    dictLVROTE   = {}
     
     # handle
     dictHBase   = {}
@@ -1962,6 +1976,7 @@ def createPlot(pFile):
     dictHChBase = {}
     dictHChComb = {}
     dictHRBF    = {}
+    dictHROTE   = {}
     # crypto-sign
     dictCSBase   = {}
     dictCSCheap  = {}
@@ -1972,6 +1987,7 @@ def createPlot(pFile):
     dictCSChBase = {}
     dictCSChComb = {}
     dictCSRBF    = {}
+    dictCSROTE   = {}
     # crypto-verif
     dictCVBase   = {}
     dictCVCheap  = {}
@@ -1982,6 +1998,7 @@ def createPlot(pFile):
     dictCVChBase = {}
     dictCVChComb = {}
     dictCVRBF    = {}
+    dictCVROTE   = {}
 
     global dockerCpu, dockerMem, networkLat, payloadSize, repeats, repeatsL2, numViews
 
@@ -2060,6 +2077,10 @@ def createPlot(pFile):
                     (val,num) = dictTVRBF.get(numFaults, ([],0))
                     val.append(float(pointVal))
                     dictTVRBF.update({numFaults:(val,num+1)})
+                if pointTag == "throughput-view" and protVal == "ROTE_PROTECTED":
+                    (val,num) = dictTVROTE.get(numFaults, ([],0))
+                    val.append(float(pointVal))
+                    dictTVROTE.update({numFaults:(val,num+1)})
                 # Latencies-view
                 if pointTag == "latency-view" and protVal == "BASIC_BASELINE":
                     (val,num) = dictLVBase.get(numFaults,([],0))
@@ -2105,6 +2126,10 @@ def createPlot(pFile):
                     (val,num) = dictLVRBF.get(numFaults, ([],0))
                     val.append(float(pointVal))
                     dictLVRBF.update({numFaults:(val,num+1)})
+                if pointTag == "latency-view" and protVal == "ROTE_PROTECTED":
+                    (val,num) = dictLVROTE.get(numFaults, ([],0))
+                    val.append(float(pointVal))
+                    dictLVROTE.update({numFaults:(val,num+1)})
                 # handle
                 if (pointTag == "handle" or pointTag == "latency-handle") and protVal == "BASIC_BASELINE":
                     (val,num) = dictHBase.get(numFaults,([],0))
@@ -2150,6 +2175,10 @@ def createPlot(pFile):
                     (val,num) = dictHRBF.get(numFaults, ([],0))
                     val.append(float(pointVal))
                     dictHRBF.update({numFaults:(val,num+1)})   
+                if pointTag == "handle" and protVal == "ROTE_PROTECTED":
+                    (val,num) = dictHROTE.get(numFaults, ([],0))
+                    val.append(float(pointVal))
+                    dictHROTE.update({numFaults:(val,num+1)})   
                 # crypto-sign
                 if pointTag == "crypto-sign" and protVal == "BASIC_BASELINE":
                     (val,num) = dictCSBase.get(numFaults,([],0))
@@ -2195,6 +2224,10 @@ def createPlot(pFile):
                     (val,num) = dictCSRBF.get(numFaults, ([],0))
                     val.append(float(pointVal))
                     dictCSRBF.update({numFaults:(val,num+1)})   
+                if pointTag == "crypto-sign" and protVal == "ROTE_PROTECTED":
+                    (val,num) = dictCSROTE.get(numFaults, ([],0))
+                    val.append(float(pointVal))
+                    dictCSROTE.update({numFaults:(val,num+1)})   
                 # crypto-verif
                 if pointTag == "crypto-verif" and protVal == "BASIC_BASELINE":
                     (val,num) = dictCVBase.get(numFaults,([],0))
@@ -2240,6 +2273,10 @@ def createPlot(pFile):
                     (val,num) = dictCVRBF.get(numFaults, ([],0))
                     val.append(float(pointVal))
                     dictCVRBF.update({numFaults:(val,num+1)}) 
+                if pointTag == "crypto-verif" and protVal == "ROTE_PROTECTED":
+                    (val,num) = dictCVROTE.get(numFaults, ([],0))
+                    val.append(float(pointVal))
+                    dictCVROTE.update({numFaults:(val,num+1)}) 
     f.close()
 
     quantileSize = 20
@@ -2257,6 +2294,7 @@ def createPlot(pFile):
     (faultsTVChBase, valsTVChBase, numsTVChBase) = dict2lists(dictTVChBase,quantileSize,False)
     (faultsTVChComb, valsTVChComb, numsTVChComb) = dict2lists(dictTVChComb,quantileSize,False)
     (faultsTVRBF, valsTVRBF, numsTVRBF)          = dict2lists(dictTVRBF,quantileSize,False)
+    (faultsTVROTE, valsTVROTE, numsTVROTE)       = dict2lists(dictTVROTE,quantileSize,False)
 
     # latency-view
     (faultsLVBase,   valsLVBase,   numsLVBase)   = dict2lists(dictLVBase,quantileSize,False)
@@ -2268,6 +2306,7 @@ def createPlot(pFile):
     (faultsLVChBase, valsLVChBase, numsLVChBase) = dict2lists(dictLVChBase,quantileSize,False)
     (faultsLVChComb, valsLVChComb, numsLVChComb) = dict2lists(dictLVChComb,quantileSize,False)
     (faultsLVRBF,    valsLVRBF,    numsLVRBF)    = dict2lists(dictLVRBF,quantileSize,False)
+    (faultsLVROTE,    valsLVROTE,    numsLVROTE)    = dict2lists(dictLVROTE,quantileSize,False)
 
     # handle
     (faultsHBase,   valsHBase,   numsHBase)   = dict2lists(dictHBase,quantileSize1,False)
@@ -2279,6 +2318,7 @@ def createPlot(pFile):
     (faultsHChBase, valsHChBase, numsHChBase) = dict2lists(dictHChBase,quantileSize1,False)
     (faultsHChComb, valsHChComb, numsHChComb) = dict2lists(dictHChComb,quantileSize1,False)
     (faultsHRBF,    valsHRBF,    numsHRBF)    = dict2lists(dictHRBF,quantileSize1,False)
+    (faultsHROTE,    valsHROTE,    numsHROTE)    = dict2lists(dictHROTE,quantileSize1,False)
 
     # crypto-sign
     (faultsCSBase,   valsCSBase,   numsCSBase)   = dict2lists(dictCSBase,quantileSize2,False)
@@ -2290,6 +2330,7 @@ def createPlot(pFile):
     (faultsCSChBase, valsCSChBase, numsCSChBase) = dict2lists(dictCSChBase,quantileSize2,False)
     (faultsCSChComb, valsCSChComb, numsCSChComb) = dict2lists(dictCSChComb,quantileSize2,False)
     (faultsCSRBF,    valsCSRBF,    numsCSRBF)    = dict2lists(dictCSRBF,quantileSize2,False)
+    (faultsCSROTE,    valsCSROTE,    numsCSROTE)    = dict2lists(dictCSROTE,quantileSize2,False)
 
     # crypto-verif
     (faultsCVBase,   valsCVBase,   numsCVBase)   = dict2lists(dictCVBase,quantileSize2,False)
@@ -2301,6 +2342,8 @@ def createPlot(pFile):
     (faultsCVChBase, valsCVChBase, numsCVChBase) = dict2lists(dictCVChBase,quantileSize2,False)
     (faultsCVChComb, valsCVChComb, numsCVChComb) = dict2lists(dictCVChComb,quantileSize2,False)
     (faultsCVRBF,    valsCVRBF,    numsCVRBF)    = dict2lists(dictCVRBF,quantileSize2,False)
+    (faultsCVROTE,    valsCVROTE,    numsCVROTE)    = dict2lists(dictCVROTE,quantileSize2,False)
+
 
     print("faults/throughputs(val+num)/latencies(val+num)/cypto-verif(val+num)/cypto-sign(val+num) for (baseline/cheap/quick/combined/free/onep/chained-baseline/chained-combined)")
     print((faultsTVBase,   (valsTVBase,   numsTVBase),   (valsLVBase,   numsLVBase),   (valsCVBase,   numsCVBase),   (valsCSBase,   numsCSBase)))
@@ -2312,6 +2355,7 @@ def createPlot(pFile):
     print((faultsTVChBase, (valsTVChBase, numsTVChBase), (valsLVChBase, numsLVChBase), (valsCVChBase, numsCVChBase), (valsCSChBase, numsCSChBase)))
     print((faultsTVChComb, (valsTVChComb, numsTVChComb), (valsLVChComb, numsLVChComb), (valsCVChComb, numsCVChComb), (valsCSChComb, numsCSChComb)))
     print((faultsTVRBF, (valsTVRBF,   numsTVRBF),   (valsLVRBF,   numsLVRBF),   (valsCVRBF,   numsCVRBF),   (valsCSRBF,   numsCSRBF)))
+    print((faultsTVROTE, (valsTVROTE,   numsTVROTE),   (valsLVROTE,   numsLVROTE),   (valsCVROTE,   numsCVROTE),   (valsCSROTE,   numsCSROTE)))
 
     print("Throughput gain (basic versions):")
     # non-chained
@@ -2351,6 +2395,8 @@ def createPlot(pFile):
     #getPercentage(RBF)
     # chained
     getPercentage(True,baseChHS,faultsHChBase,valsHChBase,combChHS,faultsHChComb,valsHChComb)
+
+    #TODO: add comparison RBF to ROTE
 
     LW = 1 # linewidth
     MS = 5 # markersize
@@ -2440,6 +2486,8 @@ def createPlot(pFile):
                     axs[0].plot(faultsTVOnep,   valsTVOnep,   color=onepCOL,   linewidth=LW, marker=onepMRK,   markersize=MS, linestyle=onepLS,   label=onepHS)
                 if len(faultsTVRBF) > 0:
                     axs[0].plot(faultsTVRBF,    valsTVRBF,    color=RoBFCOL,   linewidth=LW, marker=RoBFMRK,   markersize=MS, linestyle=RoBFLS,   label=RoBFHS)
+                if len(faultsTVROTE) > 0:
+                    axs[0].plot(faultsTVROTE,    valsTVROTE,    color=ROTECOL,   linewidth=LW, marker=ROTEMRK,   markersize=MS, linestyle=ROTELS,   label=ROTEHS)
             if plotChained:
                 if len(faultsTVChBase) > 0:
                     axs[0].plot(faultsTVChBase, valsTVChBase, color=baseChCOL, linewidth=LW, marker=baseChMRK, markersize=MS, linestyle=baseChLS, label=baseChHS)
@@ -2460,6 +2508,8 @@ def createPlot(pFile):
                     for x,y,z in zip(faultsTVOnep, valsTVOnep, numsTVOnep):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsTVRBF, valsTVRBF, numsTVRBF):
+                        axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
+                    for x,y,z in zip(faultsTVROTE, valsTVROTE, numsTVRote):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                 if plotChained:
                     for x,y,z in zip(faultsTVChBase, valsTVChBase, numsTVChBase):
@@ -2512,6 +2562,8 @@ def createPlot(pFile):
                     ax.plot(faultsLVOnep,   valsLVOnep,   color=onepCOL,   linewidth=LW, marker=onepMRK,   markersize=MS, linestyle=onepLS,   label=onepHS)
                 if len(faultsLVRBF) > 0:
                     ax.plot(faultsLVRBF,    valsLVRBF,    color=RoBFCOL,   linewidth=LW, marker=RoBFMRK,   markersize=MS, linestyle=RoBFLS,   label=RoBFHS)
+                if len(faultsLVROTE) > 0:
+                    ax.plot(faultsLVROTE,    valsLVROTE,    color=ROTECOL,   linewidth=LW, marker=ROTEMRK,   markersize=MS, linestyle=ROTELS,   label=ROTEHS)
             if plotChained:
                 if len(faultsLVChBase) > 0:
                     ax.plot(faultsLVChBase, valsLVChBase, color=baseChCOL, linewidth=LW, marker=baseChMRK, markersize=MS, linestyle=baseChLS, label=baseChHS)
@@ -2532,6 +2584,8 @@ def createPlot(pFile):
                     for x,y,z in zip(faultsLVOnep, valsLVOnep, numsLVOnep):
                         ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsLVRBF, valsLVRBF, numsLVRBF):
+                        ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
+                    for x,y,z in zip(faultsLVROTE, valsLVROTE, numsLVROTE):
                         ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                 if plotChained:
                     for x,y,z in zip(faultsLVChBase, valsLVChBase, numsLVChBase):
@@ -2554,6 +2608,8 @@ def createPlot(pFile):
                     ax.plot(faultsHOnep,   valsHOnep,   color=onepCOL,   linewidth=LW, marker="+", markersize=MS, linestyle=onepLS,   label=onepHS+"")
                 if len(faultsHRBF) > 0:
                     ax.plot(faultsHRBF,    valsHRBF,    color=RoBFCOL,   linewidth=LW, marker="+", markersize=MS, linestyle=RoBFLS,   label=RoBFHS+"")
+                if len(faultsHRBF) > 0:
+                    ax.plot(faultsHROTE,    valsHROTE,    color=ROTECOL,   linewidth=LW, marker="+", markersize=MS, linestyle=ROTELS,   label=ROTEHS+"")
             if plotChained:
                 if len(faultsHChBase) > 0:
                     ax.plot(faultsHChBase, valsHChBase, color=baseChCOL, linewidth=LW, marker="+", markersize=MS, linestyle=baseChLS, label=baseChHS+"")
@@ -2574,7 +2630,9 @@ def createPlot(pFile):
                     for x,y,z in zip(faultsHOnep, valsHOnep, numsHOnep):
                         ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsHRBF, valsHRBF, numsHRBF):
-                        ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')    
+                        ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')   
+                    for x,y,z in zip(faultsHROTE, valsHROTE, numsHROTE):
+                        ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')   
                 if plotChained:
                     for x,y,z in zip(faultsHChBase, valsHChBase, numsHChBase):
                         ax.annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
@@ -2594,8 +2652,10 @@ def createPlot(pFile):
                     axs[0].plot(faultsCSFree,   valsCSFree,   color=freeCOL,   linewidth=LW, marker="1", markersize=MS, linestyle=freeLS,   label=freeHS+" (crypto-sign)")
                 if len(faultsCSOnep) > 0:
                     axs[0].plot(faultsCSOnep,   valsCSOnep,   color=onepCOL,   linewidth=LW, marker="1", markersize=MS, linestyle=onepLS,   label=onepHS+" (crypto-sign)")
-                if len(faultsCSOnep) > 0:
+                if len(faultsCSRBF) > 0:
                     axs[0].plot(faultsCSRBF,   valsCSRBF,   color=RoBFCOL,   linewidth=LW, marker="1", markersize=MS, linestyle=RoBFLS,   label=RoBFHS+" (crypto-sign)")
+                if len(faultsCSROTE) > 0:
+                    axs[0].plot(faultsCSROTE,   valsCSROTE,   color=ROTECOL,   linewidth=LW, marker="1", markersize=MS, linestyle=ROTELS,   label=ROTEHS+" (crypto-sign)")
             if plotChained:
                 if len(faultsCSChBase) > 0:
                     axs[0].plot(faultsCSChBase, valsCSChBase, color=baseChCOL, linewidth=LW, marker="1", markersize=MS, linestyle=baseChLS, label=baseChHS+" (crypto-sign)")
@@ -2616,6 +2676,8 @@ def createPlot(pFile):
                     for x,y,z in zip(faultsCSOnep, valsCSOnep, numsCSOnep):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsCSRBF, valsCSRBF, numsCSRBF):
+                        axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
+                    for x,y,z in zip(faultsCSROTE, valsCSROTE, numsCSROTE):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                 if plotChained:
                     for x,y,z in zip(faultsCSChBase, valsCSChBase, numsCSChBase):
@@ -2638,6 +2700,8 @@ def createPlot(pFile):
                     axs[0].plot(faultsCVOnep,   valsCVOnep,   color=onepCOL,   linewidth=LW, marker="2", markersize=MS, linestyle=onepLS,   label=onepHS+" (crypto-verif)")
                 if len(faultsCVRBF) > 0:
                     axs[0].plot(faultsCVRBF,    valsCVRBF,    color=RoBFCOL,   linewidth=LW, marker="2", markersize=MS, linestyle=RoBFLS,   label=RoBFHS+" (crypto-verif)")
+                if len(faultsCVROTE) > 0:
+                    axs[0].plot(faultsCVROTE,    valsCVROTE,    color=ROTECOL,   linewidth=LW, marker="2", markersize=MS, linestyle=ROTELS,   label=ROTEHS+" (crypto-verif)")
             if plotChained:
                 if len(faultsCVChBase) > 0:
                     axs[0].plot(faultsCVChBase, valsCVChBase, color=baseChCOL, linewidth=LW, marker="2", markersize=MS, linestyle=baseChLS, label=baseChHS+" (crypto-verif)")
@@ -2658,6 +2722,8 @@ def createPlot(pFile):
                     for x,y,z in zip(faultsCVOnep, valsCVOnep, numsCVOnep):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                     for x,y,z in zip(faultsCVRBF, valsCVRBF, numsCVRBF):
+                        axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
+                    for x,y,z in zip(faultsCVROTE, valsCVROTE, numsCVROTE):
                         axs[0].annotate(z,(x,y),textcoords="offset points",xytext=XYT,ha='center')
                 if plotChained:
                     for x,y,z in zip(faultsCVChBase, valsCVChBase, numsCVChBase):
