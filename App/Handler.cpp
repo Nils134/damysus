@@ -2551,16 +2551,16 @@ void Handler::respondToTC(MsgTC msg) {
   if (msg.view%this->qsize == 0) { //start of epoch
     if (amEpochLeaderOf(msg.view, msg.signs.get(0).getSigner()) && msg.signs.get(0).getSigner() != this->myid) { //sender is a leader within that epoch
       TC input(msg.view, msg.signs);
-      TC res = tf.TEEreceiveTC(input);
+      TC res = tf.TEEreceiveTC(input, stats);
       if (DEBUG1) std::cout << KBLU << nfo() << "TC res" << res.prettyPrint() << KNRM << std::endl;
-      MsgTCRBF msgres(res.getView(), res.getSigns());
+      MsgTC msgres(res.getView(), res.getSigns());
       Peers recipients = keep_from_peers(msg.signs.get(0).getSigner());
       sendMsgTC(msgres, recipients);
     }
     if (amEpochLeaderOf(msg.view, this->myid) && msg.signs.get(0).getSigner() == this->myid ) { //receive a vote for a TC
       //Store the vote, and if bigger than quorum size, create a QC so we can move on to the next epoch
 
-      unsigned int value =  this->log.storeTCRBF(msg);
+      unsigned int value =  this->log.storeTC(msg);
       if (value == this->qsize) {
         //Create QC in TEE
         if (DEBUG1) std::cout << KBLU << nfo() << "QC size reached" << KNRM << std::endl;
@@ -2578,7 +2578,7 @@ void Handler::respondToQC(MsgQC msg) {
     int storageSize = this->log.storeQC(msg);
     if (DEBUG1) std::cout << KBLU << nfo() << "sig size good, storage " << storageSize  << KNRM << std::endl;
     if (storageSize == 1) {
-      int epochsucces = tf.TEEreceiveQC(qc);
+      int epochsucces = tf.TEEreceiveQC(qc, stats);
       if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
     }
   }
@@ -2598,7 +2598,7 @@ void Handler::handle_tc(MsgTC msg, const PeerNet::conn_t &conn) {
 }
 
 void Handler::handle_qc(MsgQC msg, const PeerNet::conn_t &conn) {
-  respondToQc(msg);
+  respondToQC(msg);
 }
 
 void Handler::handle_newview(MsgNewView msg, const PeerNet::conn_t &conn) {

@@ -41,7 +41,7 @@ class TrustedFun {
   Wish TEEwish(Stats &stats);
   Recovery TEErecovery(Stats &stats);
   TC TEEreceiveTC(TC incomingTC, Stats &stats);
-  int TEEreceiveQC(QC qc);
+  int TEEreceiveQC(QC qc, Stats &stats);
 
   TC TEEleaderWish(Signs wishes);
   QC TEEcreateQuorum(TC tc);

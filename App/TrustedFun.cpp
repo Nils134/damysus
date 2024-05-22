@@ -129,14 +129,14 @@ TC TrustedFun::TEEreceiveTC(TC incomingTC, Stats &stats) {
   return TC();
 }
 
-int TrustedFun::TEEreceiveQC(QC qc) {
+int TrustedFun::TEEreceiveQC(QC qc, Stats &stats) {
   return -1;
 }
 
 TC TrustedFun::TEEleaderWish(Signs wishes) {
-
+  return TC();
 }
   
 QC TrustedFun::TEEcreateQuorum(TC tc) {
-
+  return QC();
 }
