@@ -2326,7 +2326,31 @@ void Handler::handleNewview(MsgNewView msg) {
 }
 
 void Handler::handleWish(MsgWish msg) {
+    //TODO: what happens upon threshold of messages
+  auto start = std::chrono::steady_clock::now();
+  if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
+  if (DEBUG3) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
+  View v = msg.view;
+  if (v == this->view) {
+    if (amEpochLeaderOf(v, this->myid)) {
+      // Beginning of decide phase, we store messages until we get enough of them to start deciding
+      if (this->log.storeWish(msg) == this->qsize) {
+        //Create a TC, fusing the nonces from recovery messages, to achieve a new TC
+        createTC();
+        if (DEBUG1) std::cout << KBLU << nfo() << "Achieved quorum:" << this->qsize << KNRM << std::endl;
 
+      }
+    } else {
+      // Ignore message
+
+    }
+  } else {
+    if (DEBUG1) std::cout << KMAG << nfo() << "storing:" << msg.prettyPrint() << KNRM << std::endl;
+    if (v > this->view) { log.storeWish(msg); }
+  }
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTotalHandleTime(time);
 }
 
 void Handler::handleRecovery(MsgRec msg) {
