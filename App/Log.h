@@ -20,6 +20,10 @@ class Log {
   std::map<View,std::set<MsgPreCommit>> precommits;
   std::map<View,std::set<MsgCommit>> commits;
   std::map<View,std::set<MsgLdrPrepare>> proposals;
+  std::map<View,std::set<MsgWish>> wishes;
+  std::map<View,std::set<MsgRec>> recoveries;
+  std::map<View,std::set<MsgTC>> tcs;
+  std::map<View,std::set<MsgQC>> qcs;
 
   std::map<View,std::set<MsgNewViewAcc>> newviewsAcc;
   std::map<View,std::set<MsgPrepareAcc>> preparesAcc;
@@ -69,6 +73,14 @@ class Log {
   unsigned int storePc(MsgPreCommit msg);
   unsigned int storeCom(MsgCommit msg);
   unsigned int storeProp(MsgLdrPrepare msg);
+
+  //new epoch functionality for Hotstuff
+  unsigned int storeWish(MsgWish msg);
+  unsigned int storeRecovery(MsgRec msg);
+  unsigned int storeTC(MsgTC msg);
+  unsigned int storeQc(MsgQc msg);
+
+
 
   unsigned int storeNvAcc(MsgNewViewAcc msg);
   unsigned int storePrepAcc(MsgPrepareAcc msg);
@@ -128,6 +140,11 @@ class Log {
   Signs getPrecommit(View view, unsigned int n);
   // collects the signatures of the messages in the 'commits' log for view 'view', upto 'n' signatures
   Signs getCommit(View view, unsigned int n);
+
+  Signs getWish(View v, unsigned  int n);
+  Signs getRec(View v, unsigned int n);
+  Signs getTC(View v, unsigned int n);
+  Signs getQC(View v, unsigned in n);
 
   std::set<MsgNewViewAcc> getNewViewAcc(View view, unsigned int n);
   Signs getPrepareAcc(View view, unsigned int n);
