@@ -2386,7 +2386,7 @@ void Handler::handle_tc(MsgTC msg, const PeerNet::conn_t &conn) {
   respondToTC(msg);
 }
 
-void Handler::handle_qc(MsgQc msg, const PeerNet::conn_t &conn) {
+void Handler::handle_qc(MsgQC msg, const PeerNet::conn_t &conn) {
   respondToQc(msg);
 }
 

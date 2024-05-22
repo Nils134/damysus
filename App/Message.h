@@ -220,7 +220,7 @@ struct MsgTC {
 
 };
 
-struct MsgQc {
+struct MsgQC {
 
 };
 
