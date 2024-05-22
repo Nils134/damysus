@@ -301,7 +301,7 @@ class Handler {
   void handle_wish(MsgWish msg, const PeerNet::conn_t &conn);
   void handle_recovery(MsgRec msg, const PeerNet::conn_t &conn);
   void handle_tc(MsgTC msg, const PeerNet::conn_t &conn);
-  void handle_qc(MsgQc msg, const PeerNet::conn_t &conn);
+  void handle_qc(MsgQC msg, const PeerNet::conn_t &conn);
 
 
 

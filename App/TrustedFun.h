@@ -5,6 +5,10 @@
 #include "Hash.h"
 #include "Just.h"
 #include "Stats.h"
+#include "Wish.h"
+#include "TC.h"
+#include "QC.h"
+#include "Recovery.h"
 
 
 class TrustedFun {

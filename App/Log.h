@@ -144,7 +144,7 @@ class Log {
   Signs getWish(View v, unsigned  int n);
   Signs getRec(View v, unsigned int n);
   Signs getTC(View v, unsigned int n);
-  Signs getQC(View v, unsigned in n);
+  Signs getQC(View v, unsigned int n);
 
   std::set<MsgNewViewAcc> getNewViewAcc(View view, unsigned int n);
   Signs getPrepareAcc(View view, unsigned int n);
