@@ -604,6 +604,10 @@ const uint8_t MsgLdrPrepare::opcode;
 const uint8_t MsgPrepare::opcode;
 const uint8_t MsgPreCommit::opcode;
 const uint8_t MsgCommit::opcode;
+const uint8_t MsgWish::opcode;
+const uint8_t MsgRec::opcode;
+const uint8_t MsgTC::opcode;
+const uint8_t MsgQC::opcode;
 #elif defined(CHAINED_BASELINE)
 const uint8_t MsgNewViewCh::opcode;
 const uint8_t MsgLdrPrepareCh::opcode;
@@ -770,6 +774,11 @@ pnet(pec,pconf), cnet(cec,cconf) {
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_ldrprepare, this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_precommit,  this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_commit,     this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_wish,       this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_recovery,   this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_tc,         this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_qc,         this, _1, _2));
+
 #elif defined(CHAINED_BASELINE)
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_newview_ch,    this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_prepare_ch,    this, _1, _2));
