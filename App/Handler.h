@@ -172,6 +172,20 @@ class Handler {
   void sendMsgPreCommit(MsgPreCommit msg, Peers recipients);
   void sendMsgCommit(MsgCommit msg, Peers recipients);
 
+  // epoch messages
+  void sendMsgWish(MsgWish msg, Peers recipients);
+  void sendMsgRecovery(MsgRec msg, Peers recipients);
+  void sendMsgTC(MsgTC msg, Peers recipients);
+  void sendMsgQC(MsgQC msg, Peers recipients);
+
+  //handle epoch messages
+  void handleWish(MsgWish msg);
+  void handleRecovery(MsgRec msg, Peers recipients);
+  void createTC();
+  void createQC();
+  void respondToTC();
+  void respondToQc();
+
   //void sendMsgReply(MsgReply msg, ClientNet::conn_t recipient);
 
   void sendMsgNewViewAcc(MsgNewViewAcc msg, Peers recipients);

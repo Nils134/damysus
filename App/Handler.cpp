@@ -1992,7 +1992,7 @@ void Handler::handleEarlierMessages() {
 
 
 // TODO: also trigger new-views when there is a timeout
-void Handler::startNewView() {
+void Handler::startNewView() { //TODO: deal with epoch changes
   Just just = callTEEsign();
   // generate justifications until we can generate one for the next view
   while (just.getRData().getPropv() <= this->view) { just = callTEEsign(); }

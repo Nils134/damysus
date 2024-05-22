@@ -31,6 +31,16 @@ class TrustedFun {
   Just TEEprepare(Stats &stats, Nodes nodes, Hash hash, Just just);
   Just TEEstore(Stats &stats, Nodes nodes, Just just);
   bool TEEverify(Stats &stats, Nodes nodes, Just just);
+
+  //TODO: add epoch functions
+  void TEErollback(Stats & stats);
+  Wish TEEwish(Stats &stats);
+  Recovery TEErecovery(Stats &stats);
+  TC TEEreceiveTC(TC incomingTC, Stats &stats);
+  int TEEreceiveQC(QC qc);
+
+  TC TEEleaderWish(Wish incomingWish);
+  QC TEEcreateQuorum(TC tc);
 };
 
 
