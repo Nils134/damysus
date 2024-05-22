@@ -16,7 +16,10 @@
 #include "VJust.h"
 #include "FVJust.h"
 #include "../Enclave/user_types.h"
-
+#include "Wish.h"
+#include "Recovery.h"
+#include "TC.h"
+#include "QC.h"
 
 
 // ------------------------------------
@@ -143,8 +146,14 @@ class Handler {
   // true iff 'myid' is the leader of view 'v'
   bool amLeaderOf(View v);
 
-  // ture iff 'myid' is the leader of the current view
+  // true iff 'myid' is the leader of the current view
   bool amCurrentLeader();
+
+  // true iff 'myid' is the leader of view 'v'
+  bool amEpochLeaderOf(View v, PID id);
+
+  // true iff 'myid' is the leader of a view of the epoch of the current view
+  bool amCurrentEpochLeader();
 
   // used to print debugging info
   std::string nfo();
@@ -193,10 +202,15 @@ class Handler {
   void sendMsgPrepareAcc(MsgPrepareAcc msg, Peers recipients);
   void sendMsgPreCommitAcc(MsgPreCommitAcc msg, Peers recipients);
 
+  //RBF
   void sendMsgNewViewRBF(MsgNewViewRBF msg, Peers recipients);
   void sendMsgLdrPrepareRBF(MsgLdrPrepareRBF msg, Peers recipients);
   void sendMsgPrepareRBF(MsgPrepareRBF msg, Peers recipients);
   void sendMsgPreCommitRBF(MsgPreCommitRBF msg, Peers recipients);
+  void sendMsgWishRBF(MsgWishRBF msg, Peers recipients);
+  void sendMsgRecoveryRBF(MsgRecoveryRBF msg, Peers recipients);
+  void sendMsgTCRBF(MsgTCRBF msg, Peers recipients);
+  void sendMsgQCRBF(MsgQCRBF msg, Peers recipients);
 
   void sendMsgNewViewComb(MsgNewViewComb msg, Peers recipients);
   void sendMsgLdrPrepareComb(MsgLdrPrepareComb msg, Peers recipients);
@@ -263,6 +277,7 @@ class Handler {
 
   Peers remove_from_peers(PID id);
   Peers keep_from_peers(PID id);
+  Peers epoch_peers(View v);
 
   void startNewViewOnTimeout();
 
@@ -403,6 +418,10 @@ class Handler {
   void handleEarlierMessagesRBF();
   void startNewViewRBF();
 
+  // Steps for epoch confirmation
+  void createTCRBF();
+  void createQCRBF();
+
   // For leaders to start preparing
   void prepareRBF();
   // For leaders to start pre-committing
@@ -417,6 +436,9 @@ class Handler {
   // For backups to respond to MsgPreCommitRBF messages receveid from leaders
   void respondToPreCommitRBF(MsgPreCommitRBF msg);
 
+  void respondToTCRBF(MsgTCRBF msg);
+  void respondToQCRBF(MsgQCRBF msg);
+
   Accum newviews2accRBF(std::set<MsgNewViewRBF> newviews);
 
   Accum callTEEaccumRBF(Just justs[MAX_NUM_SIGNATURES]);
@@ -425,16 +447,35 @@ class Handler {
   Just callTEEprepareRBF(Hash h, Accum acc);
   Just callTEEstoreRBF(Just j);
 
+  Wish callTEEWishRBF();
+  Recovery callTEErecoveryRBF();
+  TC callTEEreceiveTCRBF(TC justTC);
+  int callTEEreceiveQCRBF(QC QC); //epoch config complete
+
+  TC callTEEleaderWishRBF(Wish wish);
+  QC callTEEleaderQuorumRBF(TC tc);
+
+  void callTEEattemptrollbackRBF(Just j);
+
+  //New TEE methods
+  
+
   void handleNewviewRBF(MsgNewViewRBF msg);
   void handlePrepareRBF(MsgPrepareRBF msg);
   void handleLdrPrepareRBF(MsgLdrPrepareRBF msg);
   void handlePreCommitRBF(MsgPreCommitRBF msg);
+  void handleWishRBF(MsgWishRBF msg);
+  void handleRecoveryRBF(MsgRecoveryRBF msg);
+  void handleTCRBF(MsgTCRBF msg);
 
   void handle_newviewrbf(MsgNewViewRBF msg, const PeerNet::conn_t &conn);
   void handle_preparerbf(MsgPrepareRBF msg, const PeerNet::conn_t &conn);
   void handle_ldrpreparerbf(MsgLdrPrepareRBF msg, const PeerNet::conn_t &conn);
   void handle_precommitrbf(MsgPreCommitRBF msg, const PeerNet::conn_t &conn);
-
+  void handle_wishrbf(MsgWishRBF msg, const PeerNet::conn_t &conn);
+  void handle_recoveryrbf(MsgRecoveryRBF msg, const PeerNet::conn_t &conn);
+  void handle_tcrbf(MsgTCRBF msg, const PeerNet::conn_t &conn);
+  void handle_qcrbf(MsgQCRBF msg, const PeerNet::conn_t &conn);
 
   // ------------------------------------------------------------
   // Free

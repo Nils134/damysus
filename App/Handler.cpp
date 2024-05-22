@@ -109,6 +109,14 @@ void setSigns(Signs signs, signs_t *s) {
   }
 }
 
+void setSign(Sign sign, sign_t *s) {
+    s->set=sign.isSet();
+    s->signer=sign.getSigner();
+    //for (int k = 0; k < SIGN_LEN; k++) { (s->signs[i].sign)[k] = (signs.get(i).getSign())[k]; }
+    memcpy(s->sign,sign.getSign(),SIGN_LEN);
+  
+}
+
 // stores [auth] in [a]
 void setAuth(Auth auth, auth_t *a) {
   a->id=auth.getId();
@@ -131,6 +139,25 @@ void setJust(Just just, just_t *j) {
   setRData(just.getRData(),&(j->rdata));
   // ------ SIGNS ------
   setSigns(just.getSigns(),&(j->signs));
+}
+
+void setWish(Wish wish, wish_t *w) {
+  w->set = 1;
+  w->view = wish.getView();
+  w->recoveredView = wish.getRecView();
+  setSign(wish.getSign(), &(w->sign));
+}
+
+void setTC(TC tc, tc_t *tcout) {
+  tcout->set = 1;
+  tcout->view = tc.getView();
+  setSigns(tc.getSigns(), &(tcout->signs));
+}
+
+void setQC(QC qc, qc_t *qcout) {
+  qcout->set = 1;
+  qcout->view = qc.getView();
+  setSigns(qc.getSigns(), &(qcout->signs));
 }
 
 // stores [just] in [j]
@@ -319,6 +346,42 @@ void setVotes(Vote<Void,Cert> votes[MAX_NUM_SIGNATURES], votes_t *vs) {
 
 
 
+// RBF convert struct to class
+Recovery getRec(recovery_t *r) {
+  View view = r->view;
+  uint32_t nonce = r->nonce;
+  Sign sign(r->sign.set, r->sign.signer, r->sign.sign);
+  return Recovery(view, nonce, sign);
+}
+
+Wish getWish(wish_t *w) {
+  View view = w->view;
+  View recoveredView = w->recoveredView;
+  Sign sign(w->sign.set, w->sign.signer, w->sign.sign);
+  return Wish(view, recoveredView, sign);
+}
+
+TC getTC(tc_t *t) {
+  View view = t->view;
+  Sign  a[MAX_NUM_SIGNATURES];
+  for (int i = 0; i < MAX_NUM_SIGNATURES; i++) {
+    a[i]=Sign(t->signs.signs[i].set,t->signs.signs[i].signer,t->signs.signs[i].sign);
+  }
+  Signs signs(t->signs.size,a);
+  return TC(view, signs);
+}
+
+QC getQC(qc_t *q) { //TODO: check validity compared to TC
+  View view = q->view;
+  Sign  a[MAX_NUM_SIGNATURES];
+  for (int i = 0; i < MAX_NUM_SIGNATURES; i++) {
+    a[i]=Sign(q->signs.signs[i].set,q->signs.signs[i].signer,q->signs.signs[i].sign);
+  }
+  Signs signs(q->signs.size,a);
+  return QC(view, signs);
+}
+
+
 // loads a Accum from [a]
 Accum getAccum(accum_t *a) {
   bool set   = a->set;
@@ -499,6 +562,7 @@ void Handler::startNewViewOnTimeout() {
 #elif defined (CHAINED_CHEAP_AND_QUICK)
   startNewViewChComb();
 #elif defined (ROLLBACK_FAULTY_PROTECTED)
+  if (DEBUG1) std::cout << KMAG << nfo() << "new view timeout " << this->view << KNRM << std::endl;
   startNewViewRBF();
 #else
   recordStats();
@@ -553,6 +617,10 @@ const uint8_t MsgNewViewRBF::opcode;
 const uint8_t MsgLdrPrepareRBF::opcode;
 const uint8_t MsgPrepareRBF::opcode;
 const uint8_t MsgPreCommitRBF::opcode;
+const uint8_t MsgWishRBF::opcode;
+const uint8_t MsgRecoveryRBF::opcode;
+const uint8_t MsgTCRBF::opcode;
+const uint8_t MsgQCRBF::opcode;
 #endif
 
 const uint8_t MsgTransaction::opcode;
@@ -715,6 +783,10 @@ pnet(pec,pconf), cnet(cec,cconf) {
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_ldrpreparerbf, this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_preparerbf,    this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_precommitrbf,  this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_wishrbf,       this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_recoveryrbf,   this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_tcrbf,         this, _1, _2));
+  this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_qcrbf,         this, _1, _2));
 #else
   std::cout << KRED << nfo() << "TODO" << KNRM << std::endl;
 #endif
@@ -815,6 +887,36 @@ bool Handler::amLeaderOf(View v) { return (this->myid == getLeaderOf(v)); }
 
 bool Handler::amCurrentLeader() { return (this->myid == getCurrentLeader()); }
 
+bool Handler::amEpochLeaderOf(View v, PID id) {
+  if (DEBUG3) { std::cout << KBLU << nfo() << " epoch"<< KNRM << std::endl;}
+  uint epoch = v/this->qsize;
+  uint firstInEpoch = (epoch*this->qsize)%this->total;
+  if (DEBUG3) { std::cout << KBLU << nfo() << " view " << v <<" epoch " << epoch << " , firstInEpoch " << firstInEpoch << KNRM << std::endl;}
+  if (firstInEpoch + this->qsize > this->total) {//loops back to the beginning
+    if (id < (firstInEpoch + this->qsize )%this->total) {
+      if (DEBUG3) { std::cout << KBLU << nfo() << " true" << id << KNRM << std::endl;}
+      return true;
+    }
+    if (id >= firstInEpoch) {
+      if (DEBUG3) { std::cout << KBLU << nfo() << " true" << id << KNRM << std::endl;}
+      return true;
+    }
+  }
+  else { 
+    if (firstInEpoch <= id && id < firstInEpoch + this->qsize ) {
+      if (DEBUG3) { std::cout << KBLU << nfo() << " true" << id << KNRM << std::endl;}
+      return true;
+    }
+  }
+  if (DEBUG3) { std::cout << KBLU << nfo() << " false" << id << KNRM << std::endl;}
+  return false;
+}
+
+bool Handler::amCurrentEpochLeader() {
+  return amEpochLeaderOf(this->view, this->myid);
+}
+
+
 
 /*void Handler::sendData(unsigned int size, char *data, std::set<PID> recipients) {
   if (DEBUG) { std::cout << KBLU << nfo() << "sending message to " << recipients.size() << " nodes" << KNRM << std::endl; }
@@ -856,6 +958,16 @@ Peers Handler::keep_from_peers(PID id) {
   }
   return ret;
 }
+
+Peers Handler::epoch_peers(View v) {
+  Peers ret;
+  for (Peers::iterator it = this->peers.begin(); it != this->peers.end(); ++it) {
+    Peer peer = *it;
+    if (amEpochLeaderOf(v, std::get<0>(peer))) { ret.push_back(peer); }
+  }
+  return ret;
+}
+
 
 
 std::vector<salticidae::PeerId> getPeerids(Peers recipients) {
@@ -1002,6 +1114,30 @@ void Handler::sendMsgPreCommitRBF(MsgPreCommitRBF msg, Peers recipients) {
   if (DEBUGT) printNowTime("sending MsgPreCommitRBF");
 }
 
+void Handler::sendMsgWishRBF(MsgWishRBF msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  if (DEBUG3) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgWishRBF");
+}
+
+void Handler::sendMsgRecoveryRBF(MsgRecoveryRBF msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgRecoveryRBF");
+}
+
+void Handler::sendMsgTCRBF(MsgTCRBF msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgTCRBF");
+}
+
+void Handler::sendMsgQCRBF(MsgQCRBF msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgQCRBF");
+}
 
 void Handler::sendMsgNewViewFree(MsgNewViewFree msg, Peers recipients) {
   if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
@@ -3628,10 +3764,28 @@ void Handler::handleEarlierMessagesRBF(){
 void Handler::startNewViewRBF() {
   Just just = callTEEsignRBF();
   // generate justifications until we can generate one for the next view
-  while (just.getRData().getPropv() <= this->view) { just = callTEEsignRBF(); }
+  while (just.getRData().getPropv() <= this->view ) { 
+    just = callTEEsignRBF(); 
+    if (DEBUG1) std::cout << KBLU << nfo() << "justTEESign" << just.prettyPrint() << KNRM << std::endl;
+  }
   // increment the view
   // *** THE NODE HAS NOW MOVED TO THE NEW-VIEW ***
   this->view++;
+  if (this->view%this->qsize == 0) {
+    if (DEBUG1) std::cout << KBLU << nfo() << "epoch:view " << this->view/this->qsize << ":" << this->view << KNRM << std::endl;
+    //Send out wishes to all epoch leaders
+    
+    Wish wish = callTEEWishRBF();
+    MsgWishRBF msg(wish.getView(), wish.getRecView(), wish.getSign());
+    Peers recipients = epoch_peers(this->view);
+    sendMsgWishRBF(msg, recipients);
+    if  (amEpochLeaderOf(this->view, this->myid)) {
+      if(this->log.storeWishRBF(msg) == this->qsize) {
+        if (DEBUG1) std::cout << KBLU << nfo() << "wish quorum" << KNRM << std::endl;
+        createTCRBF();
+      }
+    }
+  }
 
   // We start the timer
   setTimer();
@@ -3654,6 +3808,7 @@ void Handler::startNewViewRBF() {
     }
   } else {
     // Something wrong happened
+    if (DEBUG1) std::cout << KMAG << nfo() << "new view failure !!!" << KNRM << std::endl;
   }
 }
 
@@ -3668,9 +3823,10 @@ void Handler::prepareRBF(){
       // New block
       Block block = createNewBlock(acc.getPreph());
 
+
       // This one we'll store, and wait until we have this->qsize of them
       Just justPrep = callTEEprepareRBF(block.hash(),acc);
-      if (justPrep.isSet()) {
+      if (justPrep.isSet()) {if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.prettyPrint() << KNRM << std::endl;
         if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.prettyPrint() << KNRM << std::endl;
         if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.hash().toString() << KNRM << std::endl;
         this->blocks[this->view]=block;
@@ -3738,8 +3894,12 @@ void Handler::decideRBF(RData data) {
   }
 }
 
+
+
+
 // For backups to respond to correct MsgLdrPrepareRBF messages received from leaders
 void Handler::respondToLdrPrepareRBF(Block block, Accum acc){
+  
   Just justPrep = callTEEprepareRBF(block.hash(),acc);
   if (justPrep.isSet()) {
     if (DEBUG1) std::cout << KBLU << nfo() << "storing block for view=" << this->view << ":" << block.prettyPrint() << KNRM << std::endl;
@@ -3839,6 +3999,7 @@ Accum Handler::callTEEaccumRBFSp(just_t just){
 }
 
 Just Handler::callTEEsignRBF(){
+  if (DEBUG1) std::cout << KMAG << nfo() << " call TEE sign" << this->view  << KNRM << std::endl;
   auto start = std::chrono::steady_clock::now();
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   just_t jout;
@@ -3895,6 +4056,131 @@ Just Handler::callTEEstoreRBF(Just j){
   return just;
 }
 
+void Handler::callTEEattemptrollbackRBF(Just j){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  just_t jin;
+  setJust(j,&jin);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEattemptrollback(global_eid, &ret, &jin);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEepoch(time);
+  stats.addTEEtime(time);
+}
+
+Wish Handler::callTEEWishRBF(){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  wish_t wout;
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEwish(global_eid, &ret, &wout);
+  Wish wish = getWish(&wout);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEepoch(time);
+  stats.addTEEtime(time);
+  return wish;
+}
+
+Recovery Handler::callTEErecoveryRBF(){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  recovery_t rout;
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEErecovery(global_eid, &ret, &rout);
+  Recovery rec = getRec(&rout);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEepoch(time);
+  stats.addTEEtime(time);
+  return rec;
+}
+
+TC Handler::callTEEreceiveTCRBF(TC justTC){//TODO: change 
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  tc_t tcin;
+  tc_t tcout;
+  setTC(justTC,&tcin);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEreceiveTC(global_eid, &ret, &tcin, &tcout);
+  TC tc = getTC(&tcout);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEepoch(time);
+  stats.addTEEtime(time);
+  return tc;
+}
+
+int Handler::callTEEreceiveQCRBF(QC justQC){//TODO: change
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  qc_t qcin;
+  int inc = 100000;
+  setQC(justQC,&qcin);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEreceiveQC(global_eid, &ret,&qcin, &inc);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEepoch(time);
+  stats.addTEEtime(time);
+  return inc;
+}
+
+TC Handler::callTEEleaderWishRBF(Wish wish) {
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  tc_t tcout;
+  wish_t w;
+  setWish(wish,&w);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEleaderWish(global_eid, &ret, &w, &tcout);
+  TC tc = getTC(&tcout);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEepoch(time);
+  stats.addTEEtime(time);
+  return tc;
+}
+
+QC Handler::callTEEleaderQuorumRBF(TC tc) {
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  qc_t qcout;
+  tc_t tcin;
+  setTC(tc, &tcin);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEleaderCreateQuorum(global_eid, &ret, &tcin, &qcout);
+  QC qc = getQC(&qcout);
+#else
+  Just just = tr.TEEstore(stats,this->nodes,j);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEepoch(time);
+  stats.addTEEtime(time);
+  return qc;
+}
+
 
 void Handler::handleNewviewRBF(MsgNewViewRBF msg){
   auto start = std::chrono::steady_clock::now();
@@ -3937,7 +4223,7 @@ void Handler::handlePrepareRBF(MsgPrepareRBF msg){
   stats.addTotalHandleTime(time);
 }
 
-//TODO: check MsgLdrPrepareComb message type valid for RBF
+
 void Handler::handleLdrPrepareRBF(MsgLdrPrepareRBF msg) {
   auto start = std::chrono::steady_clock::now();
   if (DEBUG1) std::cout << KBLU << nfo() << "RBF handling:" << msg.prettyPrint() << KNRM << std::endl;
@@ -4000,6 +4286,147 @@ void Handler::handlePreCommitRBF(MsgPreCommitRBF msg){
   stats.addTotalHandleTime(time);
 }
 
+void Handler::handleWishRBF(MsgWishRBF msg) {
+  //TODO: what happens upon threshold of messages
+  auto start = std::chrono::steady_clock::now();
+  if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
+  if (DEBUG3) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
+  View v = msg.view;
+  if (v == this->view) {
+    if (amEpochLeaderOf(v, this->myid)) {
+      // Beginning of decide phase, we store messages until we get enough of them to start deciding
+      if (this->log.storeWishRBF(msg) == this->qsize) {
+        //Create a TC, fusing the nonces from recovery messages, to achieve a new TC
+        createTCRBF();
+        if (DEBUG1) std::cout << KBLU << nfo() << "Achieved quorum:" << this->qsize << KNRM << std::endl;
+
+      }
+    } else {
+      // Ignore message
+      
+    }
+  } else {
+    if (DEBUG1) std::cout << KMAG << nfo() << "storing:" << msg.prettyPrint() << KNRM << std::endl;
+    if (v > this->view) { log.storeWishRBF(msg); }
+  }
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTotalHandleTime(time);
+}
+  
+void Handler::handleRecoveryRBF(MsgRecoveryRBF msg) {
+  //TODO: else store the message for later usage after threshold of wish messages
+  auto start = std::chrono::steady_clock::now();
+  if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
+  View v = msg.view;
+  if (v == this->view) {
+    if (amEpochLeaderOf(v, this->myid)) {
+      // If leading this epoch, store the message for use in a TC creation
+      log.storeRecoveryRBF(msg); 
+    }
+  } else {
+    if (DEBUG1) std::cout << KMAG << nfo() << "storing:" << msg.prettyPrint() << KNRM << std::endl;
+    if (v > this->view) { log.storeRecoveryRBF(msg); }
+  }
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTotalHandleTime(time);
+}
+
+// After a sufficient amount of Wish messages, create a TC with the collected nonces which other TEEs can accept
+// Send to all participants
+void Handler::createTCRBF() {
+  
+  std::set<MsgWishRBF> wishes = this->log.getWishRBF(this->view, this->qsize);
+  std::set<MsgWishRBF>::iterator itwish = wishes.begin();
+  Wish wish(itwish->view, itwish->recoveredView, itwish->sign);
+  TC result = callTEEleaderWishRBF(wish);
+  MsgTCRBF msg(result.getView(), result.getSigns());
+  Peers recipients = remove_from_peers(this->myid); //log TC message to our own
+  sendMsgTCRBF(msg, recipients);
+}
+
+// After a sufficient amount of TC confirmations, create a QC with the collected nonces
+// Send to all participants
+void Handler::createQCRBF() {
+  //append all TCs into one TC
+  //supply hash, accum, (similar to TEEprepare) and the acquired TC
+  if (DEBUG1) std::cout << KBLU << nfo() << "creating quorum certificate" << KNRM << std::endl;
+  std::set<MsgTCRBF> TCvotes = this->log.getTCRBF(this->view, this->qsize);
+  Signs TCvoteSigns = Signs();
+  std::set<MsgTCRBF>::iterator itvotes;
+  for (itvotes=TCvotes.begin(); itvotes!=TCvotes.end(); ++itvotes) {//should only be logged for this->view
+    //check second signature to verify its not in the collected signs yet
+    MsgTCRBF msg = (MsgTCRBF)*itvotes;
+    Sign TCvote = msg.signs.get(1);
+    TCvoteSigns.add(TCvote);
+  }
+
+
+  TC combination = TC(this->view, TCvoteSigns); // combine all TCs stored in this->log to form one TC
+  if (DEBUG1) std::cout << KBLU << nfo() << "TC combi "<< combination.prettyPrint() << KNRM << std::endl;
+  QC quorumCertificate = callTEEleaderQuorumRBF(combination);
+  //resulting just can be send to the others, along with QC to allow continuation of the protocol 
+  if (DEBUG1) std::cout << KBLU << nfo() << "quorum certificate "<< quorumCertificate.prettyPrint() << KNRM << std::endl;
+  if (quorumCertificate.getSigns().getSize() > 0)  {
+    Peers recipients = remove_from_peers(this->myid);
+    MsgQCRBF msg(quorumCertificate.getView(), quorumCertificate.getSigns());
+    sendMsgQCRBF(msg, recipients);
+    if (quorumCertificate.getSigns().getSize() > 0) {
+    if (this->log.storeQCRBF(msg) == 1) {
+      int epochsucces = callTEEreceiveQCRBF(quorumCertificate);
+      if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
+    }
+  }
+  }
+}
+
+// For backups to respond to TC messages received from leaders
+void Handler::respondToTCRBF(MsgTCRBF msg) {
+  // TODO:
+  // check validity of message given view
+  // if not signed yet, sign the view and reply to the sender of the TC (should be first of Signs vector)
+  if (msg.view%this->qsize == 0) { //start of epoch
+    if (amEpochLeaderOf(msg.view, msg.signs.get(0).getSigner()) && msg.signs.get(0).getSigner() != this->myid) { //sender is a leader within that epoch
+      TC input(msg.view, msg.signs);
+      TC res = callTEEreceiveTCRBF(input);
+      if (DEBUG1) std::cout << KBLU << nfo() << "TC res" << res.prettyPrint() << KNRM << std::endl;
+      MsgTCRBF msgres(res.getView(), res.getSigns());
+      Peers recipients = keep_from_peers(msg.signs.get(0).getSigner());
+      sendMsgTCRBF(msgres, recipients);
+    }
+    if (amEpochLeaderOf(msg.view, this->myid) && msg.signs.get(0).getSigner() == this->myid ) { //receive a vote for a TC
+      //Store the vote, and if bigger than quorum size, create a QC so we can move on to the next epoch
+      
+      unsigned int value =  this->log.storeTCRBF(msg);
+      if (value == this->qsize) {
+        //Create QC in TEE
+        if (DEBUG1) std::cout << KBLU << nfo() << "QC size reached" << KNRM << std::endl;
+        createQCRBF();
+      }
+    }
+  }
+
+}
+
+// For backups to respond to QC messages received from leaders
+void Handler::respondToQCRBF(MsgQCRBF msg){
+  // verify QC, check if we still need it for that view/epoch or if we are already ahead
+  // broadcast to all?
+  if (DEBUG1) std::cout << KBLU << nfo() << "receiving MsgQC for view " << msg.view << KNRM << std::endl;
+  QC qc(msg.view, msg.signs);
+  if (DEBUG1) std::cout << KBLU << nfo() << "Attempt epoch change with " << qc.prettyPrint() << " , on " << this->view << KNRM << std::endl;
+  if (qc.getSigns().getSize() > 0) {
+    int storageSize = this->log.storeQCRBF(msg);
+    if (DEBUG1) std::cout << KBLU << nfo() << "sig size good, storage " << storageSize  << KNRM << std::endl;
+    if (storageSize == 1) {
+      int epochsucces = callTEEreceiveQCRBF(qc);
+      if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
+    }
+  }
+
+}
+
 void Handler::handle_newviewrbf(MsgNewViewRBF msg, const PeerNet::conn_t &conn) {
   if (DEBUGT) printNowTime("handling MsgNewViewRBF");
   handleNewviewRBF(msg);
@@ -4018,6 +4445,26 @@ void Handler::handle_ldrpreparerbf(MsgLdrPrepareRBF msg, const PeerNet::conn_t &
 void Handler::handle_precommitrbf(MsgPreCommitRBF msg, const PeerNet::conn_t &conn) {
   if (DEBUGT) printNowTime("handling MsgPreCommitRBF");
   handlePreCommitRBF(msg);
+}
+
+void Handler::handle_wishrbf(MsgWishRBF msg, const PeerNet::conn_t &conn){
+  if (DEBUGT) printNowTime("handling MsgWishRBF");
+  handleWishRBF(msg);
+}
+
+void Handler::handle_recoveryrbf(MsgRecoveryRBF msg, const PeerNet::conn_t &conn){
+  if (DEBUGT) printNowTime("handling MsgRecoveryRBF");
+  handleRecoveryRBF(msg);
+}
+
+void Handler::handle_tcrbf(MsgTCRBF msg, const PeerNet::conn_t &conn){
+  if (DEBUGT) printNowTime("handling MsgTCRBF");
+  respondToTCRBF(msg);
+}
+
+void Handler::handle_qcrbf(MsgQCRBF msg, const PeerNet::conn_t &conn){
+  if (DEBUGT) printNowTime("handling MsgQCRBF");
+  respondToQCRBF(msg);
 }
 
 

@@ -18,7 +18,6 @@ After QC:
     adopt view of epoch if not replaced by new TEE
 
 TODOs Handler:
-copy functions that do not change for RBF compared to Comb
 add functions for Heartbeat protocol to send/receive messages
     - handle message collection at replica, supply list of messages to TEE
         -check Comb variant for message collection
@@ -29,7 +28,19 @@ add callTEE functions for newly defined TEE methods
 think of some way to allow faulty and unresponsive TEEs to occasionally trigger restarts 
 
 Damysus uses logs to store messages up to quorum size (this->log in Handler.cpp)
-    - handle logs for RBF messages
     - TODO: add storage functionality and other methods related to Comb for RBF
 
-TODO: before adding new functionality, tag commit where RBF is the same as Comb, but has duplicate functionality
+Create Peers list method that only includes leaders of an epoch 
+
+Fix stats.h for wish and recovery messages
+
+For now: skip nonce messages, create space in TC and QC to hold a nonce, reply with only their nonce to particular TC or QC
+
+Write down where to add new opcodes:
+    - Client.cpp
+    - types.h
+    - reg_handler
+
+struct for Wish class etc:
+    Enclave/user_types.h
+    
