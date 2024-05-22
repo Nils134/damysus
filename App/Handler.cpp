@@ -2509,7 +2509,7 @@ void Handler::handleRecovery(MsgRec msg) {
 
 void Handler::createTC() {
   Signs wishes = this->log.getWish(this->view, this->qsize);
-  TC result = TC(); //callTEEleaderWish(wish); //TODO: changes
+  TC result = tf.TEEleaderWish(wishes); //callTEEleaderWish(wish); //TODO: changes
   MsgTC msg(result.getView(), result.getSigns());
   Peers recipients = remove_from_peers(this->myid); //log TC message to our own
   sendMsgTC(msg, recipients);

@@ -109,3 +109,34 @@ Just TrustedFun::TEEstore(Stats &stats, Nodes nodes, Just just) {
   }
   return Just();
 }
+
+
+void TrustedFun::TEErollback(Stats & stats, View v) {
+  this->view = view;
+}
+
+Wish TrustedFun::TEEwish(Stats &stats) {
+  Wish result = Wish(view+1, view, Sign(this->priv, this->id, std::to_string(view+1) +", " + std::to_string(view)));
+  return result;
+}
+
+Recovery TrustedFun::TEErecovery(Stats &stats) {
+  Recovery result = Recovery(view, view, Sign(this->priv, this->id, std::to_string(view) +", " + std::to_string(view)));
+  return result;
+}
+
+TC TrustedFun::TEEreceiveTC(TC incomingTC, Stats &stats) {
+  return TC();
+}
+
+int TrustedFun::TEEreceiveQC(QC qc) {
+  return -1;
+}
+
+TC TrustedFun::TEEleaderWish(Signs wishes) {
+
+}
+  
+QC TrustedFun::TEEcreateQuorum(TC tc) {
+
+}
