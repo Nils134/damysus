@@ -193,7 +193,7 @@ class Handler {
   void createTC();
   void createQC();
   void respondToTC(MsgTC msg);
-  void respondToQc(MsgQC msg);
+  void respondToQC(MsgQC msg);
 
   //void sendMsgReply(MsgReply msg, ClientNet::conn_t recipient);
 

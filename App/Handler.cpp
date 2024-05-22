@@ -2522,7 +2522,7 @@ void Handler::createQC() {
 
   TC combination = TC(this->view, TCvoteSigns); // combine all TCs stored in this->log to form one TC
   if (DEBUG1) std::cout << KBLU << nfo() << "TC combi "<< combination.prettyPrint() << KNRM << std::endl;
-  QC quorumCertificate = QC();//callTEEleaderQuorum(combination); //TODO: change
+  QC quorumCertificate = tf.TEEcreateQuorum(combination);//callTEEleaderQuorum(combination); //TODO: change
   //resulting just can be send to the others, along with QC to allow continuation of the protocol 
   if (DEBUG1) std::cout << KBLU << nfo() << "quorum certificate "<< quorumCertificate.prettyPrint() << KNRM << std::endl;
   if (quorumCertificate.getSigns().getSize() > 0)  {
@@ -2539,11 +2539,40 @@ void Handler::createQC() {
 }
   
 void Handler::respondToTC(MsgTC msg) {
+  if (msg.view%this->qsize == 0) { //start of epoch
+    if (amEpochLeaderOf(msg.view, msg.signs.get(0).getSigner()) && msg.signs.get(0).getSigner() != this->myid) { //sender is a leader within that epoch
+      TC input(msg.view, msg.signs);
+      TC res = tf.TEEreceiveTC(input);
+      if (DEBUG1) std::cout << KBLU << nfo() << "TC res" << res.prettyPrint() << KNRM << std::endl;
+      MsgTCRBF msgres(res.getView(), res.getSigns());
+      Peers recipients = keep_from_peers(msg.signs.get(0).getSigner());
+      sendMsgTC(msgres, recipients);
+    }
+    if (amEpochLeaderOf(msg.view, this->myid) && msg.signs.get(0).getSigner() == this->myid ) { //receive a vote for a TC
+      //Store the vote, and if bigger than quorum size, create a QC so we can move on to the next epoch
 
+      unsigned int value =  this->log.storeTCRBF(msg);
+      if (value == this->qsize) {
+        //Create QC in TEE
+        if (DEBUG1) std::cout << KBLU << nfo() << "QC size reached" << KNRM << std::endl;
+        createQC();
+      }
+    }
+  }
 }
   
-void Handler::respondToQc(MsgQC msg) {
-
+void Handler::respondToQC(MsgQC msg) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "receiving MsgQC for view " << msg.view << KNRM << std::endl;
+  QC qc(msg.view, msg.signs);
+  if (DEBUG1) std::cout << KBLU << nfo() << "Attempt epoch change with " << qc.prettyPrint() << " , on " << this->view << KNRM << std::endl;
+  if (qc.getSigns().getSize() > 0) {
+    int storageSize = this->log.storeQC(msg);
+    if (DEBUG1) std::cout << KBLU << nfo() << "sig size good, storage " << storageSize  << KNRM << std::endl;
+    if (storageSize == 1) {
+      int epochsucces = tf.TEEreceiveQC(qc);
+      if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
+    }
+  }
 }
 
 void Handler::handle_wish(MsgWish msg, const PeerNet::conn_t &conn) {
