@@ -897,6 +897,30 @@ void Handler::sendMsgCommit(MsgCommit msg, Peers recipients) {
   if (DEBUGT) printNowTime("sending MsgCommit");
 }
 
+//New functions for Hotstuff to have the pacemaker
+void Handler::sendMsgWish(MsgWish msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgCommit");
+}
+
+void Handler::sendMsgRecovery(MsgRec msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgCommit");
+}
+
+void Handler::sendMsgTC(MsgTC msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgCommit");
+}
+
+void Handler::sendMsgQC(MsgQC msg, Peers recipients) {
+  if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
+  this->pnet.multicast_msg(msg, getPeerids(recipients));
+  if (DEBUGT) printNowTime("sending MsgCommit");
+}
 
 /*void Handler::sendMsgReply(MsgReply msg, ClientNet::conn_t recipient) {
   if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "-> clients" << KNRM << std::endl;
