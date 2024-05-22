@@ -2508,10 +2508,8 @@ void Handler::handleRecovery(MsgRec msg) {
 }
 
 void Handler::createTC() {
-  std::set<MsgWish> wishes = this->log.getWish(this->view, this->qsize);
-  std::set<MsgWish>::iterator itwish = wishes.begin();
-  Wish wish(itwish->view, itwish->recoveredView, itwish->sign);
-  TC result = callTEEleaderWish(wish); //TODO: changes
+  Signs wishes = this->log.getWish(this->view, this->qsize);
+  TC result = TC(); //callTEEleaderWish(wish); //TODO: changes
   MsgTC msg(result.getView(), result.getSigns());
   Peers recipients = remove_from_peers(this->myid); //log TC message to our own
   sendMsgTC(msg, recipients);
@@ -2519,20 +2517,12 @@ void Handler::createTC() {
 
 void Handler::createQC() {
   if (DEBUG1) std::cout << KBLU << nfo() << "creating quorum certificate" << KNRM << std::endl;
-  std::set<MsgTC> TCvotes = this->log.getTC(this->view, this->qsize);
-  Signs TCvoteSigns = Signs();
-  std::set<MsgTC>::iterator itvotes;
-  for (itvotes=TCvotes.begin(); itvotes!=TCvotes.end(); ++itvotes) {//should only be logged for this->view
-    //check second signature to verify its not in the collected signs yet
-    MsgTC msg = (MsgTC)*itvotes;
-    Sign TCvote = msg.signs.get(1);
-    TCvoteSigns.add(TCvote);
-  }
-
+  
+  Signs TCvoteSigns = this->log.getTC(this->view, this->qsize);;
 
   TC combination = TC(this->view, TCvoteSigns); // combine all TCs stored in this->log to form one TC
   if (DEBUG1) std::cout << KBLU << nfo() << "TC combi "<< combination.prettyPrint() << KNRM << std::endl;
-  QC quorumCertificate = callTEEleaderQuorum(combination); //TODO: change
+  QC quorumCertificate = QC();//callTEEleaderQuorum(combination); //TODO: change
   //resulting just can be send to the others, along with QC to allow continuation of the protocol 
   if (DEBUG1) std::cout << KBLU << nfo() << "quorum certificate "<< quorumCertificate.prettyPrint() << KNRM << std::endl;
   if (quorumCertificate.getSigns().getSize() > 0)  {
@@ -4080,7 +4070,8 @@ Wish Handler::callTEEWishRBF(){
   sgx_status_t status = RBF_TEEwish(global_eid, &ret, &wout);
   Wish wish = getWish(&wout);
 #else
-  Just just = tr.TEEstore(stats,this->nodes,j);
+  // Just just = tr.TEEstore(stats,this->nodes,j);
+  Wish wish = Wish(); 
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
@@ -4097,7 +4088,8 @@ Recovery Handler::callTEErecoveryRBF(){
   sgx_status_t status = RBF_TEErecovery(global_eid, &ret, &rout);
   Recovery rec = getRec(&rout);
 #else
-  Just just = tr.TEEstore(stats,this->nodes,j);
+  // Just just = tr.TEEstore(stats,this->nodes,j);
+  Recovery rec = Recovery();
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
@@ -4116,7 +4108,8 @@ TC Handler::callTEEreceiveTCRBF(TC justTC){//TODO: change
   sgx_status_t status = RBF_TEEreceiveTC(global_eid, &ret, &tcin, &tcout);
   TC tc = getTC(&tcout);
 #else
-  Just just = tr.TEEstore(stats,this->nodes,j);
+  // Just just = tr.TEEstore(stats,this->nodes,j);
+  TC tc = TC();
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
@@ -4134,7 +4127,8 @@ int Handler::callTEEreceiveQCRBF(QC justQC){//TODO: change
   sgx_status_t ret;
   sgx_status_t status = RBF_TEEreceiveQC(global_eid, &ret,&qcin, &inc);
 #else
-  Just just = tr.TEEstore(stats,this->nodes,j);
+  // Just just = tr.TEEstore(stats,this->nodes,j);
+  int inc = 10000;
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
@@ -4153,7 +4147,8 @@ TC Handler::callTEEleaderWishRBF(Wish wish) {
   sgx_status_t status = RBF_TEEleaderWish(global_eid, &ret, &w, &tcout);
   TC tc = getTC(&tcout);
 #else
-  Just just = tr.TEEstore(stats,this->nodes,j);
+  // Just just = tr.TEEstore(stats,this->nodes,j);
+  TC tc = TC();
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
@@ -4172,7 +4167,8 @@ QC Handler::callTEEleaderQuorumRBF(TC tc) {
   sgx_status_t status = RBF_TEEleaderCreateQuorum(global_eid, &ret, &tcin, &qcout);
   QC qc = getQC(&qcout);
 #else
-  Just just = tr.TEEstore(stats,this->nodes,j);
+  // Just just = tr.TEEstore(stats,this->nodes,j);
+  QC qc = QC();
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();

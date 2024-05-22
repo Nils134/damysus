@@ -460,7 +460,7 @@ unsigned int Log::storeRecovery(MsgRec msg) {
   View v = msg.view;
   PID signer = msg.sign.getSigner();
 
-  std::map<View,std::set<MsgRec>>::iterator it1 = this->recoveries,find(v);
+  std::map<View,std::set<MsgRec>>::iterator it1 = this->recoveries.find(v);
   if (it1 != this->recoveries.end()) { // there is already an entry for this view
     std::set<MsgRec> msgs = it1->second;
 
@@ -2132,6 +2132,65 @@ Signs Log::getCommit(View view, unsigned int n) {
   return signs;
 }
 
+Signs Log::getWish(View v, unsigned int n) {
+  Signs signs;
+  std::map<View,std::set<MsgWish>>::iterator it1 = this->wishes.find(v);
+  if (it1 != this->wishes.end()) { // there is already an entry for this view
+    std::set<MsgWish> msgs = it1->second;
+    for (std::set<MsgWish>::iterator it=msgs.begin(); signs.getSize() < n && it!=msgs.end(); ++it) {
+      MsgWish msg = (MsgWish)*it;
+      Signs others = Signs(msg.sign);
+      //if (DEBUG) std::cout << KMAG << "adding-log-com-signatures: " << others.prettyPrint() << KNRM << std::endl;
+      signs.addUpto(others,n);
+    }
+  }
+  return signs;
+}
+
+Signs Log::getRec(View v, unsigned int n) {
+  Signs signs;
+  std::map<View,std::set<MsgRec>>::iterator it1 = this->recoveries.find(v);
+  if (it1 != this->recoveries.end()) { // there is already an entry for this view
+    std::set<MsgRec> msgs = it1->second;
+    for (std::set<MsgRec>::iterator it=msgs.begin(); signs.getSize() < n && it!=msgs.end(); ++it) {
+      MsgRec msg = (MsgRec)*it;
+      Signs others = Signs(msg.sign);
+      //if (DEBUG) std::cout << KMAG << "adding-log-com-signatures: " << others.prettyPrint() << KNRM << std::endl;
+      signs.addUpto(others,n);
+    }
+  }
+  return signs;
+}
+
+Signs Log::getTC(View v, unsigned int n) {
+  Signs signs;
+  std::map<View,std::set<MsgTC>>::iterator it1 = this->tcs.find(v);
+  if (it1 != this->tcs.end()) { // there is already an entry for this view
+    std::set<MsgTC> msgs = it1->second;
+    for (std::set<MsgTC>::iterator it=msgs.begin(); signs.getSize() < n && it!=msgs.end(); ++it) {
+      MsgTC msg = (MsgTC)*it;
+      Signs others = msg.signs;
+      //if (DEBUG) std::cout << KMAG << "adding-log-com-signatures: " << others.prettyPrint() << KNRM << std::endl;
+      signs.addUpto(others,n);
+    }
+  }
+  return signs;
+}
+
+Signs Log::getQC(View v, unsigned int n) {
+  Signs signs;
+  std::map<View,std::set<MsgQC>>::iterator it1 = this->qcs.find(v);
+  if (it1 != this->qcs.end()) { // there is already an entry for this view
+    std::set<MsgQC> msgs = it1->second;
+    for (std::set<MsgQC>::iterator it=msgs.begin(); signs.getSize() < n && it!=msgs.end(); ++it) {
+      MsgQC msg = (MsgQC)*it;
+      Signs others = msg.signs;
+      //if (DEBUG) std::cout << KMAG << "adding-log-com-signatures: " << others.prettyPrint() << KNRM << std::endl;
+      signs.addUpto(others,n);
+    }
+  }
+  return signs;
+}
 
 MsgLdrPrepareAcc Log::firstLdrPrepareAcc(View view) {
   std::map<View,std::set<MsgLdrPrepareAcc>>::iterator it = this->ldrpreparesAcc.find(view);
