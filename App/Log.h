@@ -78,7 +78,7 @@ class Log {
   unsigned int storeWish(MsgWish msg);
   unsigned int storeRecovery(MsgRec msg);
   unsigned int storeTC(MsgTC msg);
-  unsigned int storeQc(MsgQc msg);
+  unsigned int storeQC(MsgQC msg);
 
 
 
