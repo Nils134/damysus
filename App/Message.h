@@ -209,19 +209,81 @@ struct MsgCommit {
 //New epoch messages for Hotstuff
 
 struct MsgWish {
-
+  static const uint8_t opcode = HDR_WISH;
+  salticidae::DataStream serialized;
+  View view;
+  View recoveredView;
+  Sign sign;
+  MsgWish(const View &view, const View &recoveredView, const Sign &sign) : view(view), recoveredView(recoveredView), sign(sign) { serialized << view << recoveredView << sign; }
+  MsgWish(salticidae::DataStream &&s) { s >> view >> recoveredView >> sign; }
+  bool operator<(const MsgWish& s) const {
+    if (sign < s.sign) { return true; }
+    return false;
+  }
+  std::string prettyPrint() {
+    return "WISH[" + std::to_string(view) + "," + std::to_string(recoveredView) + "," + sign.prettyPrint() + "]";
+  }
+  unsigned int sizeMsg() { return ((sizeof(View)*2) + sizeof(Sign)); }
+  void serialize(salticidae::DataStream &s) const { s << view << recoveredView << sign; }
 };
 
 struct MsgRec {
-
+  static const uint8_t opcode = HDR_REC;
+  salticidae::DataStream serialized;
+  View view;
+  uint32_t nonce;
+  Sign sign;
+  MsgRec(const View &view, const uint32_t &nonce, const Sign &sign) : view(view),nonce(nonce), sign(sign) { serialized << view << nonce << sign; }
+  MsgRec(salticidae::DataStream &&s) { s >> view >> nonce >> sign; }
+  bool operator<(const MsgRec& s) const {
+    if (sign < s.sign) { return true; }
+    return false;
+  }
+  std::string prettyPrint() {
+    return "RECOVER[" +  std::to_string(view) + "," + std::to_string(nonce) + "," + sign.prettyPrint() + "]";
+  }
+  unsigned int sizeMsg() { return ((sizeof(View)*2) + sizeof(Sign)); }
+  void serialize(salticidae::DataStream &s) const { s << view << nonce << sign; }
 };
 
 struct MsgTC {
-
+  static const uint8_t opcode = HDR_TC;
+  salticidae::DataStream serialized;
+  View view;
+  uint32_t nonce = 0;
+  Signs signs;
+  MsgTC(const View &view, uint32_t nonce, const Signs &signs) : view(view), nonce(nonce),signs(signs) { serialized << view  << nonce << signs; }
+  MsgTC(const View &view, const Signs &signs) : view(view),signs(signs) { serialized << view << nonce << signs; }
+  MsgTC(salticidae::DataStream &&s) { s >> view >> nonce>>  signs; }
+  bool operator<(const MsgTC& s) const {
+    if (signs < s.signs) { return true; }
+    return false;
+  }
+  std::string prettyPrint() {
+    return "TC[" + std::to_string(view) + ", " + std::to_string(nonce) + "," + signs.prettyPrint() +  "]";
+  }
+  unsigned int sizeMsg() { return (sizeof(View) + sizeof(uint32_t)  + sizeof(Signs)); }
+  void serialize(salticidae::DataStream &s) const { s << view << nonce << signs; }
 };
 
 struct MsgQC {
-
+  static const uint8_t opcode = HDR_QC;
+  salticidae::DataStream serialized;
+  View view;
+  uint32_t nonce = 0;
+  Signs signs;
+  MsgQC(const View &view, uint32_t nonce, const Signs &signs) : view(view), nonce(nonce),signs(signs) { serialized << view  << nonce << signs; }
+  MsgQC(const View &view, const Signs &signs) : view(view),signs(signs) { serialized << view  << nonce << signs; }
+  MsgQC(salticidae::DataStream &&s) { s >> view >> nonce>>  signs; }
+  bool operator<(const MsgQC& s) const {
+    if (signs < s.signs) { return true; }
+    return false;
+  }
+  std::string prettyPrint() {
+    return "QC[" + std::to_string(view) + ", " + std::to_string(nonce) + "," + signs.prettyPrint() + "]";
+  }
+  unsigned int sizeMsg() { return (sizeof(View) + sizeof(uint32_t) + sizeof(Signs)); }
+  void serialize(salticidae::DataStream &s) const { s << view << nonce << signs; }
 };
 
 /////////////////////////////////////////////////////
