@@ -2354,15 +2354,62 @@ void Handler::handleWish(MsgWish msg) {
 }
 
 void Handler::handleRecovery(MsgRec msg) {
-
+  auto start = std::chrono::steady_clock::now();
+  if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
+  View v = msg.view;
+  if (v == this->view) {
+    if (amEpochLeaderOf(v, this->myid)) {
+      // If leading this epoch, store the message for use in a TC creation
+      log.storeRecovery(msg); 
+    }
+  } else {
+    if (DEBUG1) std::cout << KMAG << nfo() << "storing:" << msg.prettyPrint() << KNRM << std::endl;
+    if (v > this->view) { log.storeRecovery(msg); }
+  }
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTotalHandleTime(time);
 }
 
 void Handler::createTC() {
-
+  std::set<MsgWish> wishes = this->log.getWish(this->view, this->qsize);
+  std::set<MsgWish>::iterator itwish = wishes.begin();
+  Wish wish(itwish->view, itwish->recoveredView, itwish->sign);
+  TC result = callTEEleaderWish(wish); //TODO: changes
+  MsgTC msg(result.getView(), result.getSigns());
+  Peers recipients = remove_from_peers(this->myid); //log TC message to our own
+  sendMsgTC(msg, recipients);
 }
 
 void Handler::createQC() {
+  if (DEBUG1) std::cout << KBLU << nfo() << "creating quorum certificate" << KNRM << std::endl;
+  std::set<MsgTC> TCvotes = this->log.getTC(this->view, this->qsize);
+  Signs TCvoteSigns = Signs();
+  std::set<MsgTC>::iterator itvotes;
+  for (itvotes=TCvotes.begin(); itvotes!=TCvotes.end(); ++itvotes) {//should only be logged for this->view
+    //check second signature to verify its not in the collected signs yet
+    MsgTC msg = (MsgTC)*itvotes;
+    Sign TCvote = msg.signs.get(1);
+    TCvoteSigns.add(TCvote);
+  }
 
+
+  TC combination = TC(this->view, TCvoteSigns); // combine all TCs stored in this->log to form one TC
+  if (DEBUG1) std::cout << KBLU << nfo() << "TC combi "<< combination.prettyPrint() << KNRM << std::endl;
+  QC quorumCertificate = callTEEleaderQuorum(combination); //TODO: change
+  //resulting just can be send to the others, along with QC to allow continuation of the protocol 
+  if (DEBUG1) std::cout << KBLU << nfo() << "quorum certificate "<< quorumCertificate.prettyPrint() << KNRM << std::endl;
+  if (quorumCertificate.getSigns().getSize() > 0)  {
+    Peers recipients = remove_from_peers(this->myid);
+    MsgQC msg(quorumCertificate.getView(), quorumCertificate.getSigns());
+    sendMsgQC(msg, recipients);
+    if (quorumCertificate.getSigns().getSize() > 0) {
+    if (this->log.storeQC(msg) == 1) {
+      int epochsucces = callTEEreceiveQCRBF(quorumCertificate); //TODO: change
+      if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
+    }
+  }
+  }
 }
   
 void Handler::respondToTC(MsgTC msg) {
