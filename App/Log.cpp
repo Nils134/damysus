@@ -397,29 +397,51 @@ unsigned int Log::storeProp(MsgLdrPrepare msg) {
 }
 
 unsigned int Log::storeWish(MsgWish msg) {
-  std::set<MsgWish> ret;
-  std::map<View,std::set<MsgWish>>::iterator it1 = this->wishes.find(view);
+  View v = msg.view;
+  PID signer = msg.sign.getSigner();
+
+  std::map<View,std::set<MsgWish>>::iterator it1 = this->wishes.find(v);
   if (it1 != this->wishes.end()) { // there is already an entry for this view
     std::set<MsgWish> msgs = it1->second;
-    for (std::set<MsgWish>::iterator it=msgs.begin(); ret.size() < n && it!=msgs.end(); ++it) {
-      MsgWish msg = (MsgWish)*it;
-      ret.insert(msg);
+
+    // We only add 'msg' to the log if the sender hasn't already sent a new-view message for this view
+    if (!msgWishFrom(msgs,signer)) {
+      msgs.insert(msg);
+      this->wishes[v]=msgs;
+      //if (DEBUG) { std::cout << KGRN << "updated entry; #=" << msgs.size() << KNRM << std::endl; }
+      return msgs.size();
     }
+  } else { // there is no entry for this view
+    this->wishes[v]={msg};
+    if (DEBUG) { std::cout << KGRN << "no entry for this view (" << v << ") before; #=1" << KNRM << std::endl; }
+    return 1;
   }
-  return ret;
+
+  return 0;
 }
 
 unsigned int Log::storeRecovery(MsgRec msg) {
-  std::set<MsgRec> ret;
-  std::map<View,std::set<MsgRec>>::iterator it1 = this->recoveries.find(view);
+  View v = msg.view;
+  PID signer = msg.sign.getSigner();
+
+  std::map<View,std::set<MsgRec>>::iterator it1 = this->recoveries,find(v);
   if (it1 != this->recoveries.end()) { // there is already an entry for this view
     std::set<MsgRec> msgs = it1->second;
-    for (std::set<MsgRec>::iterator it=msgs.begin(); ret.size() < n && it!=msgs.end(); ++it) {
-      MsgRec msg = (MsgRec)*it;
-      ret.insert(msg);
+
+    // We only add 'msg' to the log if the sender hasn't already sent a new-view message for this view
+    if (!msgRecFrom(msgs,signer)) {
+      msgs.insert(msg);
+      this->recoveries[v]=msgs;
+      //if (DEBUG) { std::cout << KGRN << "updated entry; #=" << msgs.size() << KNRM << std::endl; }
+      return msgs.size();
     }
+  } else { // there is no entry for this view
+    this->recoveries[v]={msg};
+    if (DEBUG) { std::cout << KGRN << "no entry for this view (" << v << ") before; #=1" << KNRM << std::endl; }
+    return 1;
   }
-  return ret;
+
+  return 0;
 }
 
 unsigned int Log::storeTC(MsgTC msg) {
@@ -447,7 +469,27 @@ unsigned int Log::storeTC(MsgTC msg) {
 }
 
 unsigned int Log::storeQC(MsgQC msg) {
+  View v = msg.view;
+  PID signer = msg.signs.get(1).getSigner();
+  if (DEBUG1) { std::cout << KGRN << "storing QC" << msg.prettyPrint() << KNRM << std::endl; }
+  std::map<View,std::set<MsgQC>>::iterator it1 = this->qcs.find(v);
+  if (it1 != this->qcs.end()) { // there is already an entry for this view
+    std::set<MsgQC> msgs = it1->second;
+    // We only add 'msg' to the log if the sender hasn't already sent a new-view message for this view
+    if (!msgQCFrom(msgs,signer)) {
 
+      msgs.insert(msg);
+      this->qcs[v]=msgs;
+      //if (DEBUG) { std::cout << KGRN << "updated entry; #=" << msgs.size() << KNRM << std::endl; }
+      return msgs.size();
+    }
+  } else { // there is no entry for this view
+    this->qcs[v]={msg};
+    if (DEBUG) { std::cout << KGRN << "no entry for this view (" << v << ") before; #=1" << KNRM << std::endl; }
+    return 1;
+  }
+
+  return 0;
 }
 
 
