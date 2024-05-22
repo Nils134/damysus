@@ -64,6 +64,12 @@ typedef uint8_t HEADER;
 #define HDR_TC_RBF          0x42
 #define HDR_QC_RBF          0x43 
 
+//define new Hotstuff opcodes
+#define HDR_WISH            0x44
+#define HDR_REC             0x45
+#define HDR_TC              0x46
+#define HDR_QC              0x47
+
 
 typedef uint8_t Phase1;
 
