@@ -180,11 +180,11 @@ class Handler {
 
   //handle epoch messages
   void handleWish(MsgWish msg);
-  void handleRecovery(MsgRec msg, Peers recipients);
+  void handleRecovery(MsgRec msg);
   void createTC();
   void createQC();
-  void respondToTC();
-  void respondToQc();
+  void respondToTC(MsgTC msg);
+  void respondToQc(MsgQC msg);
 
   //void sendMsgReply(MsgReply msg, ClientNet::conn_t recipient);
 
@@ -297,6 +297,11 @@ class Handler {
   void handle_transaction(MsgTransaction msg, const ClientNet::conn_t &conn);
   void handle_start(MsgStart msg, const ClientNet::conn_t &conn);
   //void handle_stop(MsgStop msg, const ClientNet::conn_t &conn);
+
+  void handle_wish(MsgWish msg, const PeerNet::conn_t &conn);
+  void handle_recovery(MsgRec msg, const PeerNet::conn_t &conn);
+  void handle_tc(MsgTC msg, const PeerNet::conn_t &conn);
+  void handle_qc(MsgQc msg, const PeerNet::conn_t &conn);
 
 
 

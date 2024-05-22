@@ -206,7 +206,23 @@ struct MsgCommit {
   void serialize(salticidae::DataStream &s) const { s << rdata << signs; }
 };
 
+//New epoch messages for Hotstuff
 
+struct MsgWish {
+
+};
+
+struct MsgRec {
+
+};
+
+struct MsgTC {
+
+};
+
+struct MsgQc {
+
+};
 
 /////////////////////////////////////////////////////
 // Basic version - Quick

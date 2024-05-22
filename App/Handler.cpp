@@ -2325,6 +2325,47 @@ void Handler::handleNewview(MsgNewView msg) {
   stats.addTotalNvTime(time);
 }
 
+void Handler::handleWish(MsgWish msg) {
+
+}
+
+void Handler::handleRecovery(MsgRec msg) {
+
+}
+
+void Handler::createTC() {
+
+}
+
+void Handler::createQC() {
+
+}
+  
+void Handler::respondToTC(MsgTC msg) {
+
+}
+  
+void Handler::respondToQc(MsgQC msg) {
+
+}
+
+void Handler::handle_wish(MsgWish msg, const PeerNet::conn_t &conn) {
+  handleWish(msg);
+}
+
+void Handler::handle_recovery(MsgRec msg, const PeerNet::conn_t &conn) {
+  handleRecovery(msg);
+}
+
+
+void Handler::handle_tc(MsgTC msg, const PeerNet::conn_t &conn) {
+  respondToTC(msg);
+}
+
+void Handler::handle_qc(MsgQc msg, const PeerNet::conn_t &conn) {
+  respondToQc(msg);
+}
+
 void Handler::handle_newview(MsgNewView msg, const PeerNet::conn_t &conn) {
   handleNewview(msg);
 }
