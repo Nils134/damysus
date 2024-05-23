@@ -1328,6 +1328,114 @@ Just Handler::callTEEstore(Just j) {
   return just;
 }
 
+Wish Handler::callTEEWish(){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  wish_t wout;
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEwish(global_eid, &ret, &wout);
+  Wish wish = getWish(&wout);
+#else
+  Wish wish = tf.TEEwish(stats);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEepoch(time);
+  stats.addTEEtime(time);
+  return wish;
+}
+
+Recovery Handler::callTEErecovery(){
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  recovery_t rout;
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEErecovery(global_eid, &ret, &rout);
+  Recovery rec = getRec(&rout);
+#else
+  Recovery rec = tf.TEErecovery(stats);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEepoch(time);
+  stats.addTEEtime(time);
+  return rec;
+}
+
+TC Handler::callTEEreceiveTC(TC justTC){//TODO: change 
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  tc_t tcin;
+  tc_t tcout;
+  setTC(justTC,&tcin);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEreceiveTC(global_eid, &ret, &tcin, &tcout);
+  TC tc = getTC(&tcout);
+#else
+  TC tc = tf.TEEreceiveTC(justTC, stats);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEepoch(time);
+  stats.addTEEtime(time);
+  return tc;
+}
+
+int Handler::callTEEreceiveQC(QC justQC){//TODO: change
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  qc_t qcin;
+  int inc = 100000;
+  setQC(justQC,&qcin);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEreceiveQC(global_eid, &ret,&qcin, &inc);
+#else
+  int inc = tf.TEEreceiveQC(justqc ,stats);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEepoch(time);
+  stats.addTEEtime(time);
+  return inc;
+}
+
+TC Handler::callTEEleaderWish(Signs wishes) {
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  tc_t tcout;
+  wish_t w;
+  setWish(wish,&w);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEleaderWish(global_eid, &ret, &w, &tcout);
+  TC tc = getTC(&tcout);
+#else
+  TC tc = tf.TEEleaderWish(wishes, stats);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEepoch(time);
+  stats.addTEEtime(time);
+  return tc;
+}
+
+QC Handler::callTEEleaderQuorum(TC tc) {
+  auto start = std::chrono::steady_clock::now();
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+  qc_t qcout;
+  tc_t tcin;
+  setTC(tc, &tcin);
+  sgx_status_t ret;
+  sgx_status_t status = RBF_TEEleaderCreateQuorum(global_eid, &ret, &tcin, &qcout);
+  QC qc = getQC(&qcout);
+#else
+  QC qc = tf.TEEcreateQuorum(tc);
+#endif
+  auto end = std::chrono::steady_clock::now();
+  double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  stats.addTEEepoch(time);
+  stats.addTEEtime(time);
+  return qc;
+}
 
 /*bool Handler::callTEEverify(Just j) {
   auto start = std::chrono::steady_clock::now();
@@ -2144,6 +2252,22 @@ void Handler::startNewView() { //TODO: deal with epoch changes
   // increment the view
   // *** THE NODE HAS NOW MOVED TO THE NEW-VIEW ***
   this->view++;
+
+  if (this->view%this->qsize == 0) {
+    if (DEBUG1) std::cout << KBLU << nfo() << "epoch:view " << this->view/this->qsize << ":" << this->view << KNRM << std::endl;
+    //Send out wishes to all epoch leaders
+    
+    Wish wish = ;
+    MsgWishRBF msg(wish.getView(), wish.getRecView(), wish.getSign());
+    Peers recipients = epoch_peers(this->view);
+    sendMsgWish(msg, recipients);
+    if  (amEpochLeaderOf(this->view, this->myid)) {
+      if(this->log.storeWishRBF(msg) == this->qsize) {
+        if (DEBUG1) std::cout << KBLU << nfo() << "wish quorum" << KNRM << std::endl;
+        createTCRBF();
+      }
+    }
+  }
 
   // We start the timer
   setTimer();
@@ -4377,7 +4501,7 @@ void Handler::createTCRBF() {
   TC result = callTEEleaderWishRBF(wish);
   MsgTCRBF msg(result.getView(), result.getSigns());
   Peers recipients = remove_from_peers(this->myid); //log TC message to our own
-  sendMsgTCRBF(msg, recipients);
+  // sendMsgTCRBF(msg, recipients);
 }
 
 // After a sufficient amount of TC confirmations, create a QC with the collected nonces
