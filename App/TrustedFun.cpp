@@ -116,7 +116,7 @@ void TrustedFun::TEErollback(Stats & stats, View v) {
 }
 
 Wish TrustedFun::TEEwish(Stats &stats) {
-  Wish result = Wish(view+1, view, Sign(this->priv, this->id, std::to_string(view+1) +", " + std::to_string(view)));
+  Wish result = Wish(view, view-1, Sign(this->priv, this->id, std::to_string(view) +", " + std::to_string(view-1)));
   return result;
 }
 
@@ -126,17 +126,31 @@ Recovery TrustedFun::TEErecovery(Stats &stats) {
 }
 
 TC TrustedFun::TEEreceiveTC(TC incomingTC, Stats &stats) {
+  if (incomingTC.getSigns().getSize() >= this->qsize) {
+    return incomingTC;
+  } 
   return TC();
 }
 
 int TrustedFun::TEEreceiveQC(QC qc, Stats &stats) {
-  return -1;
+  if (qc.getSigns().getSize() >= this->qsize) {
+    return 1;
+  }
+  return 0;
 }
 
-TC TrustedFun::TEEleaderWish(Signs wishes) {
+TC TrustedFun::TEEleaderWish(Signs wishes, Stats &stats) { //Since wishes here are not bound to be valid, we need to check all of them
+  if (wishes.getSize() >= this->qsize) {
+    TC out = TC(view, wishes);
+    return out;
+  }
   return TC();
 }
   
 QC TrustedFun::TEEcreateQuorum(TC tc) {
+  if (tc.getSigns().getSize() >= this->qsize) {
+    QC out = QC(view, tc.getSigns());
+    return out;
+  }
   return QC();
 }

@@ -1022,25 +1022,25 @@ void Handler::sendMsgCommit(MsgCommit msg, Peers recipients) {
 void Handler::sendMsgWish(MsgWish msg, Peers recipients) {
   if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
   this->pnet.multicast_msg(msg, getPeerids(recipients));
-  if (DEBUGT) printNowTime("sending MsgCommit");
+  if (DEBUGT) printNowTime("sending MsgWish");
 }
 
 void Handler::sendMsgRecovery(MsgRec msg, Peers recipients) {
   if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
   this->pnet.multicast_msg(msg, getPeerids(recipients));
-  if (DEBUGT) printNowTime("sending MsgCommit");
+  if (DEBUGT) printNowTime("sending MsgRec");
 }
 
 void Handler::sendMsgTC(MsgTC msg, Peers recipients) {
   if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
   this->pnet.multicast_msg(msg, getPeerids(recipients));
-  if (DEBUGT) printNowTime("sending MsgCommit");
+  if (DEBUGT) printNowTime("sending MsgTC");
 }
 
 void Handler::sendMsgQC(MsgQC msg, Peers recipients) {
   if (DEBUG1) std::cout << KBLU << nfo() << "sending:" << msg.prettyPrint() << "->" << recipients2string(recipients) << KNRM << std::endl;
   this->pnet.multicast_msg(msg, getPeerids(recipients));
-  if (DEBUGT) printNowTime("sending MsgCommit");
+  if (DEBUGT) printNowTime("sending MsgQC");
 }
 
 /*void Handler::sendMsgReply(MsgReply msg, ClientNet::conn_t recipient) {
@@ -1390,7 +1390,7 @@ int Handler::callTEEreceiveQC(QC justQC){//TODO: change
   sgx_status_t ret;
   sgx_status_t status = RBF_TEEreceiveQC(global_eid, &ret,&qcin, &inc);
 #else
-  int inc = tf.TEEreceiveQC(justqc ,stats);
+  int inc = tf.TEEreceiveQC(justQC ,stats);
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
@@ -2257,14 +2257,14 @@ void Handler::startNewView() { //TODO: deal with epoch changes
     if (DEBUG1) std::cout << KBLU << nfo() << "epoch:view " << this->view/this->qsize << ":" << this->view << KNRM << std::endl;
     //Send out wishes to all epoch leaders
     
-    Wish wish = ;
-    MsgWishRBF msg(wish.getView(), wish.getRecView(), wish.getSign());
+    Wish wish = callTEEWish();
+    MsgWish msg(wish.getView(), wish.getRecView(), wish.getSign());
     Peers recipients = epoch_peers(this->view);
     sendMsgWish(msg, recipients);
     if  (amEpochLeaderOf(this->view, this->myid)) {
-      if(this->log.storeWishRBF(msg) == this->qsize) {
+      if(this->log.storeWish(msg) == this->qsize) {
         if (DEBUG1) std::cout << KBLU << nfo() << "wish quorum" << KNRM << std::endl;
-        createTCRBF();
+        createTC();
       }
     }
   }
@@ -2600,13 +2600,16 @@ void Handler::handleWish(MsgWish msg) {
   if (DEBUG1) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
   if (DEBUG3) std::cout << KBLU << nfo() << "handling:" << msg.prettyPrint() << KNRM << std::endl;
   View v = msg.view;
+  if (DEBUG1) std::cout << KBLU << nfo() << "views:: " << v << " " << this->view  << KNRM << std::endl;
   if (v == this->view) {
     if (amEpochLeaderOf(v, this->myid)) {
       // Beginning of decide phase, we store messages until we get enough of them to start deciding
-      if (this->log.storeWish(msg) == this->qsize) {
+      unsigned int value = this->log.storeWish(msg);
+      if (DEBUG1) std::cout << KBLU << nfo() << "store size" << value << KNRM << std::endl;
+      if (value == this->qsize) {
         //Create a TC, fusing the nonces from recovery messages, to achieve a new TC
         createTC();
-        if (DEBUG1) std::cout << KBLU << nfo() << "Achieved quorum:" << this->qsize << KNRM << std::endl;
+        if (DEBUG1) std::cout << KBLU << nfo() << "Wish quorum:" << this->qsize << KNRM << std::endl;
 
       }
     } else {
@@ -2642,7 +2645,9 @@ void Handler::handleRecovery(MsgRec msg) {
 
 void Handler::createTC() {
   Signs wishes = this->log.getWish(this->view, this->qsize);
-  TC result = tf.TEEleaderWish(wishes); //callTEEleaderWish(wish); //TODO: changes
+  if (DEBUG1) std::cout << KMAG << nfo() << "check sign" << wishes.get(0).getSign() << KNRM << std::endl;
+  TC result = tf.TEEleaderWish(wishes, stats); //callTEEleaderWish(wish); //TODO: changes
+  if (DEBUG1) std::cout << KMAG << nfo() << "created TC:" << result.prettyPrint() << KNRM << std::endl;
   MsgTC msg(result.getView(), result.getSigns());
   Peers recipients = remove_from_peers(this->myid); //log TC message to our own
   sendMsgTC(msg, recipients);
@@ -2672,7 +2677,8 @@ void Handler::createQC() {
 }
   
 void Handler::respondToTC(MsgTC msg) {
-  if (msg.view%this->qsize == 0) { //start of epoch
+  if (DEBUG1) std::cout << KBLU << nfo() << "receive MsgTC " << msg.prettyPrint() << KNRM << std::endl;
+  if (msg.view%this->qsize == 0 && msg.signs.getSize() >= this->qsize) { //start of epoch
     if (amEpochLeaderOf(msg.view, msg.signs.get(0).getSigner()) && msg.signs.get(0).getSigner() != this->myid) { //sender is a leader within that epoch
       TC input(msg.view, msg.signs);
       TC res = tf.TEEreceiveTC(input, stats);
@@ -2680,14 +2686,15 @@ void Handler::respondToTC(MsgTC msg) {
       MsgTC msgres(res.getView(), res.getSigns());
       Peers recipients = keep_from_peers(msg.signs.get(0).getSigner());
       sendMsgTC(msgres, recipients);
-    }
+    }if (DEBUG1) std::cout << KBLU << nfo() << "TC first possible singner "<< msg.signs.get(0).getSigner() << KNRM << std::endl;
     if (amEpochLeaderOf(msg.view, this->myid) && msg.signs.get(0).getSigner() == this->myid ) { //receive a vote for a TC
       //Store the vote, and if bigger than quorum size, create a QC so we can move on to the next epoch
 
       unsigned int value =  this->log.storeTC(msg);
+      if (DEBUG1) std::cout << KBLU << nfo() << "TC stores "<< value << KNRM << std::endl;
       if (value == this->qsize) {
         //Create QC in TEE
-        if (DEBUG1) std::cout << KBLU << nfo() << "QC size reached" << KNRM << std::endl;
+        if (DEBUG1) std::cout << KBLU << nfo() << "TC size reached" << KNRM << std::endl;
         createQC();
       }
     }

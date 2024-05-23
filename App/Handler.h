@@ -296,6 +296,16 @@ class Handler {
   Just callTEEprepare(Hash h, Just j);
   bool callTEEverify(Just j);
 
+  Wish callTEEWish();
+  Recovery callTEErecovery();
+  TC callTEEreceiveTC(TC justTC);
+  int callTEEreceiveQC(QC QC); //epoch config complete
+
+  TC callTEEleaderWish(Signs wishes);
+  QC callTEEleaderQuorum(TC tc);
+
+  void callTEEattemptrollback(Just j);
+
   void handleNewview(MsgNewView msg);
   void handlePrepare(MsgPrepare msg);
   void handleLdrPrepare(MsgLdrPrepare msg);

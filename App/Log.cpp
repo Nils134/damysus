@@ -495,6 +495,7 @@ unsigned int Log::storeTC(MsgTC msg) {
       //if (DEBUG) { std::cout << KGRN << "updated entry; #=" << msgs.size() << KNRM << std::endl; }
       return msgs.size();
     }
+    if (DEBUG) { std::cout << KGRN << "invalid TCFrom " << signer << " ," << msg.prettyPrint()  << KNRM << std::endl; }
   } else { // there is no entry for this view
     this->tcs[v]={msg};
     if (DEBUG) { std::cout << KGRN << "no entry for this view (" << v << ") before; #=1" << KNRM << std::endl; }

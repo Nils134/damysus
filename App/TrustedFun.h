@@ -43,7 +43,7 @@ class TrustedFun {
   TC TEEreceiveTC(TC incomingTC, Stats &stats);
   int TEEreceiveQC(QC qc, Stats &stats);
 
-  TC TEEleaderWish(Signs wishes);
+  TC TEEleaderWish(Signs wishes, Stats &stats);
   QC TEEcreateQuorum(TC tc);
 };
 
