@@ -22,7 +22,7 @@ class Log {
   std::map<View,std::set<MsgLdrPrepare>> proposals;
   std::map<View,std::set<MsgWish>> wishes;
   std::map<View,std::set<MsgRec>> recoveries;
-  std::map<View,std::set<MsgTC>> tcs;
+  std::map<View,std::set<Sign>> tcs;
   std::map<View,std::set<MsgQC>> qcs;
 
   std::map<View,std::set<MsgNewViewAcc>> newviewsAcc;
@@ -82,7 +82,7 @@ class Log {
   //new epoch functionality for Hotstuff
   unsigned int storeWish(MsgWish msg);
   unsigned int storeRecovery(MsgRec msg);
-  unsigned int storeTC(MsgTC msg);
+  unsigned int storeTC(View v, Sign tc);
   unsigned int storeQC(MsgQC msg);
 
 

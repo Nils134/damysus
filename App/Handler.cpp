@@ -2268,7 +2268,7 @@ void Handler::startNewView() { //TODO: deal with epoch changes
       }
     }
   }
-
+  else {
   // We start the timer
   setTimer();
 
@@ -2288,6 +2288,7 @@ void Handler::startNewView() { //TODO: deal with epoch changes
     }
   } else {
     // Something wrong happened
+  }
   }
 }
 
@@ -2648,8 +2649,11 @@ void Handler::createTC() {
   if (DEBUG1) std::cout << KMAG << nfo() << "check sign" << wishes.get(0).getSign() << KNRM << std::endl;
   TC result = tf.TEEleaderWish(wishes, stats); //callTEEleaderWish(wish); //TODO: changes
   if (DEBUG1) std::cout << KMAG << nfo() << "created TC:" << result.prettyPrint() << KNRM << std::endl;
-  MsgTC msg(result.getView(), result.getSigns());
+  unsigned char tosign [72];
+  std::strcpy(reinterpret_cast<char*>(tosign), result.prettyPrint().c_str()); 
+  MsgTC msg(result.getView(), result.getSigns(), Signs(Sign(this->myid, tosign)));
   Peers recipients = remove_from_peers(this->myid); //log TC message to our own
+  this->log.storeTC(result.getView(), Sign(this->myid, tosign));
   sendMsgTC(msg, recipients);
 }
 
@@ -2679,18 +2683,27 @@ void Handler::createQC() {
 void Handler::respondToTC(MsgTC msg) {
   if (DEBUG1) std::cout << KBLU << nfo() << "receive MsgTC " << msg.prettyPrint() << KNRM << std::endl;
   if (msg.view%this->qsize == 0 && msg.signs.getSize() >= this->qsize) { //start of epoch
-    if (amEpochLeaderOf(msg.view, msg.signs.get(0).getSigner()) && msg.signs.get(0).getSigner() != this->myid) { //sender is a leader within that epoch
-      TC input(msg.view, msg.signs);
-      TC res = tf.TEEreceiveTC(input, stats);
-      if (DEBUG1) std::cout << KBLU << nfo() << "TC res" << res.prettyPrint() << KNRM << std::endl;
-      MsgTC msgres(res.getView(), res.getSigns());
-      Peers recipients = keep_from_peers(msg.signs.get(0).getSigner());
-      sendMsgTC(msgres, recipients);
-    }if (DEBUG1) std::cout << KBLU << nfo() << "TC first possible singner "<< msg.signs.get(0).getSigner() << KNRM << std::endl;
-    if (amEpochLeaderOf(msg.view, this->myid) && msg.signs.get(0).getSigner() == this->myid ) { //receive a vote for a TC
+    if (amEpochLeaderOf(msg.view, msg.endsign.get(0).getSigner()) && msg.endsign.get(0).getSigner() != this->myid && msg.endsign.getSize()==1) { //sender is a leader within that epoch
+      TC tc = TC(msg.view, msg.signs);
+      unsigned char tosign [72];
+      std::strcpy(reinterpret_cast<char*>(tosign), tc.prettyPrint().c_str()); 
+      // if (DEBUG1) std::cout << KBLU << nfo() << "respond ing to " << msg.endsign.get(0).getSigner() << KNRM << std::endl;
+      Peers recipients = keep_from_peers(msg.endsign.get(0).getSigner());
+      Sign votes [2];
+      votes[0] = msg.endsign.get(0);
+      votes[1] = Sign(this->myid, tosign);
+      MsgTC response = MsgTC(msg.view, msg.signs, Signs(2, votes));
+      // if (DEBUG1) std::cout << KBLU << nfo() << "respond MsgTC " << response.prettyPrint() << KNRM << std::endl;
+      sendMsgTC(response, recipients);
+    }
+    else if (msg.endsign.getSize() == 2) { //receive a vote for a TC
       //Store the vote, and if bigger than quorum size, create a QC so we can move on to the next epoch
-
-      unsigned int value =  this->log.storeTC(msg);
+      Sign other = msg.endsign.get(0);
+      if (other.getSigner() == this->myid) {
+        other = msg.endsign.get(1);
+      }
+      if (DEBUG1) std::cout << KBLU << nfo() << "TC endsign "<< msg.endsign.get(0).getSigner() << KNRM << std::endl;
+      unsigned int value =  this->log.storeTC(msg.view, other);
       if (DEBUG1) std::cout << KBLU << nfo() << "TC stores "<< value << KNRM << std::endl;
       if (value == this->qsize) {
         //Create QC in TEE

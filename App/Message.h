@@ -252,15 +252,18 @@ struct MsgTC {
   View view;
   uint32_t nonce = 0;
   Signs signs;
-  MsgTC(const View &view, uint32_t nonce, const Signs &signs) : view(view), nonce(nonce),signs(signs) { serialized << view  << nonce << signs; }
-  MsgTC(const View &view, const Signs &signs) : view(view),signs(signs) { serialized << view << nonce << signs; }
-  MsgTC(salticidae::DataStream &&s) { s >> view >> nonce>>  signs; }
+  Signs endsign;
+  MsgTC(const View &view, uint32_t nonce, const Signs &signs, const Signs &endsign) : view(view), nonce(nonce),signs(signs), endsign(endsign) { serialized << view  << nonce << signs << endsign; }
+  MsgTC(const View &view, const Signs &signs, const Signs &endsign) : view(view),signs(signs), endsign(endsign) { serialized << view << nonce << signs << endsign; }
+  MsgTC(salticidae::DataStream &&s) { s >> view >> nonce>>  signs >> endsign; }
   bool operator<(const MsgTC& s) const {
-    if (signs < s.signs) { return true; }
+    if (signs < s.signs) {    
+      return true;
+     }
     return false;
   }
   std::string prettyPrint() {
-    return "TC[" + std::to_string(view) + ", " + std::to_string(nonce) + "," + signs.prettyPrint() +  "]";
+    return "TC[" + std::to_string(view) + ", " + std::to_string(nonce) + "," + signs.prettyPrint() +  "]" + endsign.prettyPrint();
   }
   unsigned int sizeMsg() { return (sizeof(View) + sizeof(uint32_t)  + sizeof(Signs)); }
   void serialize(salticidae::DataStream &s) const { s << view << nonce << signs; }

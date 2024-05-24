@@ -83,11 +83,14 @@ bool msgRecFrom(std::set<MsgRec> msgs, PID signer) {
   return false;
 }
 
-bool msgTCFrom(std::set<MsgTC> msgs, PID signer) {
-  for (std::set<MsgTC>::iterator it=msgs.begin(); it!=msgs.end(); ++it) {
-    MsgTC msg = (MsgTC)*it;
-    PID k = msg.signs.get(1).getSigner();
-    if (signer == k) { return true; }
+bool msgTCFrom(std::set<Sign> msgs, PID signer) {
+  for (std::set<Sign>::iterator it=msgs.begin(); it!=msgs.end(); ++it) {
+    Sign msg = (Sign)*it;
+    if (DEBUG1) { std::cout << KGRN << "evaluateing" << msg.prettyPrint() << " looking for" << signer << KNRM << std::endl; }
+    PID k = msg.getSigner();
+    if (signer == k) { 
+      if (DEBUG1) { std::cout << KGRN << "equals" << signer << " , " << k<< KNRM << std::endl; }
+      return true; }
   }
   return false;
 }
@@ -480,22 +483,19 @@ unsigned int Log::storeRecovery(MsgRec msg) {
   return 0;
 }
 
-unsigned int Log::storeTC(MsgTC msg) {
-  View v = msg.view;
-  PID signer = msg.signs.get(1).getSigner();
-  if (DEBUG1) { std::cout << KGRN << "storing TC" << msg.prettyPrint() << KNRM << std::endl; }
-  std::map<View,std::set<MsgTC>>::iterator it1 = this->tcs.find(v);
+unsigned int Log::storeTC(View v, Sign msg) {
+  std::map<View,std::set<Sign>>::iterator it1 = this->tcs.find(v);
   if (it1 != this->tcs.end()) { // there is already an entry for this view
-    std::set<MsgTC> msgs = it1->second;
+    std::set<Sign> msgs = it1->second;
     // We only add 'msg' to the log if the sender hasn't already sent a new-view message for this view
-    if (!msgTCFrom(msgs,signer)) {
-
+    if (!msgTCFrom(msgs, msg.getSigner())) {
+      if (DEBUG1) { std::cout << KGRN << "old size"  << msgs.size()<< KNRM << std::endl; }
+      if (DEBUG1) { std::cout << KGRN << "comp"<< KNRM << std::endl; }
       msgs.insert(msg);
       this->tcs[v]=msgs;
-      //if (DEBUG) { std::cout << KGRN << "updated entry; #=" << msgs.size() << KNRM << std::endl; }
+      if (DEBUG1) { std::cout << KGRN << "new size"  << msgs.size()<< KNRM << std::endl; }
       return msgs.size();
     }
-    if (DEBUG) { std::cout << KGRN << "invalid TCFrom " << signer << " ," << msg.prettyPrint()  << KNRM << std::endl; }
   } else { // there is no entry for this view
     this->tcs[v]={msg};
     if (DEBUG) { std::cout << KGRN << "no entry for this view (" << v << ") before; #=1" << KNRM << std::endl; }
@@ -2165,14 +2165,12 @@ Signs Log::getRec(View v, unsigned int n) {
 
 Signs Log::getTC(View v, unsigned int n) {
   Signs signs;
-  std::map<View,std::set<MsgTC>>::iterator it1 = this->tcs.find(v);
+  std::map<View,std::set<Sign>>::iterator it1 = this->tcs.find(v);
   if (it1 != this->tcs.end()) { // there is already an entry for this view
-    std::set<MsgTC> msgs = it1->second;
-    for (std::set<MsgTC>::iterator it=msgs.begin(); signs.getSize() < n && it!=msgs.end(); ++it) {
-      MsgTC msg = (MsgTC)*it;
-      Signs others = msg.signs;
-      //if (DEBUG) std::cout << KMAG << "adding-log-com-signatures: " << others.prettyPrint() << KNRM << std::endl;
-      signs.addUpto(others,n);
+    std::set<Sign> msgs = it1->second;
+    for (std::set<Sign>::iterator it=msgs.begin(); signs.getSize() < n && it!=msgs.end(); ++it) {
+      Sign msg = (Sign)*it;
+      signs.add(msg);
     }
   }
   return signs;
