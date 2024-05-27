@@ -86,10 +86,10 @@ bool msgRecFrom(std::set<MsgRec> msgs, PID signer) {
 bool msgTCFrom(std::set<Sign> msgs, PID signer) {
   for (std::set<Sign>::iterator it=msgs.begin(); it!=msgs.end(); ++it) {
     Sign msg = (Sign)*it;
-    if (DEBUG1) { std::cout << KGRN << "evaluateing" << msg.prettyPrint() << " looking for" << signer << KNRM << std::endl; }
+    // if (DEBUG1) { std::cout << KGRN << "evaluateing" << msg.prettyPrint() << " looking for" << signer << KNRM << std::endl; }
     PID k = msg.getSigner();
     if (signer == k) { 
-      if (DEBUG1) { std::cout << KGRN << "equals" << signer << " , " << k<< KNRM << std::endl; }
+      // if (DEBUG1) { std::cout << KGRN << "equals" << signer << " , " << k<< KNRM << std::endl; }
       return true; }
   }
   return false;
@@ -489,11 +489,11 @@ unsigned int Log::storeTC(View v, Sign msg) {
     std::set<Sign> msgs = it1->second;
     // We only add 'msg' to the log if the sender hasn't already sent a new-view message for this view
     if (!msgTCFrom(msgs, msg.getSigner())) {
-      if (DEBUG1) { std::cout << KGRN << "old size"  << msgs.size()<< KNRM << std::endl; }
-      if (DEBUG1) { std::cout << KGRN << "comp"<< KNRM << std::endl; }
+      // if (DEBUG1) { std::cout << KGRN << "old size"  << msgs.size()<< KNRM << std::endl; }
+      // if (DEBUG1) { std::cout << KGRN << "comp"<< KNRM << std::endl; }
       msgs.insert(msg);
       this->tcs[v]=msgs;
-      if (DEBUG1) { std::cout << KGRN << "new size"  << msgs.size()<< KNRM << std::endl; }
+      // if (DEBUG1) { std::cout << KGRN << "new size"  << msgs.size()<< KNRM << std::endl; }
       return msgs.size();
     }
   } else { // there is no entry for this view
@@ -508,7 +508,7 @@ unsigned int Log::storeTC(View v, Sign msg) {
 unsigned int Log::storeQC(MsgQC msg) {
   View v = msg.view;
   PID signer = msg.signs.get(1).getSigner();
-  if (DEBUG1) { std::cout << KGRN << "storing QC" << msg.prettyPrint() << KNRM << std::endl; }
+  if (DEBUG1) { std::cout << KGRN << "storing QC " << msg.prettyPrint() << KNRM << std::endl; }
   std::map<View,std::set<MsgQC>>::iterator it1 = this->qcs.find(v);
   if (it1 != this->qcs.end()) { // there is already an entry for this view
     std::set<MsgQC> msgs = it1->second;
@@ -517,7 +517,7 @@ unsigned int Log::storeQC(MsgQC msg) {
 
       msgs.insert(msg);
       this->qcs[v]=msgs;
-      //if (DEBUG) { std::cout << KGRN << "updated entry; #=" << msgs.size() << KNRM << std::endl; }
+      if (DEBUG1) { std::cout << KGRN << "updated entry; #=" << msgs.size() << KNRM << std::endl; }
       return msgs.size();
     }
   } else { // there is no entry for this view
