@@ -4309,8 +4309,8 @@ int Handler::callTEEreceiveQCRBF(QC justQC){//TODO: change
   sgx_status_t ret;
   sgx_status_t status = RBF_TEEreceiveQC(global_eid, &ret,&qcin, &inc);
 #else
-  // Just just = tr.TEEstore(stats,this->nodes,j);
   int inc = 10000;
+  inc = tf.TEEreceiveQC(justQC, stats);
 #endif
   auto end = std::chrono::steady_clock::now();
   double time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
