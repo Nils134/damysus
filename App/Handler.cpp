@@ -1404,7 +1404,6 @@ TC Handler::callTEEleaderWish(Signs wishes) {
 #if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
   tc_t tcout;
   wish_t w;
-  setWish(wish,&w);
   sgx_status_t ret;
   sgx_status_t status = RBF_TEEleaderWish(global_eid, &ret, &w, &tcout);
   TC tc = getTC(&tcout);
@@ -2647,7 +2646,7 @@ void Handler::handleRecovery(MsgRec msg) {
 void Handler::createTC() {
   Signs wishes = this->log.getWish(this->view, this->qsize);
   if (DEBUG1) std::cout << KMAG << nfo() << "check sign" << wishes.get(0).getSign() << KNRM << std::endl;
-  TC result = tf.TEEleaderWish(wishes, stats); //callTEEleaderWish(wish); //TODO: changes
+  TC result = callTEEleaderWish(wishes); //TODO: changes
   if (DEBUG1) std::cout << KMAG << nfo() << "created TC:" << result.prettyPrint() << KNRM << std::endl;
   unsigned char tosign [72];
   std::strcpy(reinterpret_cast<char*>(tosign), result.prettyPrint().c_str()); 
@@ -2664,7 +2663,7 @@ void Handler::createQC() {
 
   TC combination = TC(this->view, TCvoteSigns); // combine all TCs stored in this->log to form one TC
   if (DEBUG1) std::cout << KBLU << nfo() << "TC combi "<< combination.prettyPrint() << KNRM << std::endl;
-  QC quorumCertificate = tf.TEEcreateQuorum(combination);//callTEEleaderQuorum(combination); //TODO: change
+  QC quorumCertificate = callTEEleaderQuorum(combination);
   //resulting just can be send to the others, along with QC to allow continuation of the protocol 
   if (DEBUG1) std::cout << KBLU << nfo() << "quorum certificate "<< quorumCertificate.prettyPrint() << KNRM << std::endl;
   if (quorumCertificate.getSigns().getSize() > 0)  {
@@ -2722,7 +2721,7 @@ void Handler::respondToQC(MsgQC msg) {
     int storageSize = this->log.storeQC(msg);
     if (DEBUG1) std::cout << KBLU << nfo() << "sig size good, storage " << storageSize  << KNRM << std::endl;
     if (storageSize == 1) {
-      int epochsucces = tf.TEEreceiveQC(qc, stats);
+      int epochsucces = callTEEreceiveQC(qc);
       if (DEBUG1) std::cout << KBLU << nfo() << "epoch switch " << epochsucces << KNRM << std::endl;
     }
   }
