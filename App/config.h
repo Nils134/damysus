@@ -8,7 +8,7 @@
 // debug switches
 #define DEBUG   false
 #define DEBUG0  false
-#define DEBUG1  true
+#define DEBUG1  false
 #define DEBUG2  false
 #define DEBUG3  false
 // to print timing info
@@ -16,7 +16,7 @@
 // adds ocalls to profile crypto in enclaves
 #define DEBUGOT false
 // to print 'EXECUTE' messages
-#define DEBUGE  true
+#define DEBUGE  false
 // to print client messages
 #define DEBUGC  false
 

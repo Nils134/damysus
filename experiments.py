@@ -48,7 +48,7 @@ faults       = [1] #[1,2,4,10] #[1,2,4,10,20,30,40] #[1,2,4,6,8,10,12,14,20,30] 
 repeats      = 100 #10 #50 #5 #100 #2     # number of times to repeat each experiment
 repeatsL2    = 1
 #
-numViews     = 7     # number of views in each run
+numViews     = 30     # number of views in each run
 cutOffBound  = 300     # stop experiment after some time
 #
 numClients   = 1     # number of clients

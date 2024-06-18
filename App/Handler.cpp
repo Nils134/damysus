@@ -2649,7 +2649,7 @@ void Handler::createTC() {
   TC result = callTEEleaderWish(wishes); //TODO: changes
   if (DEBUG1) std::cout << KMAG << nfo() << "created TC:" << result.prettyPrint() << KNRM << std::endl;
   unsigned char tosign [72];
-  std::strcpy(reinterpret_cast<char*>(tosign), result.prettyPrint().c_str()); 
+  std::strncpy(reinterpret_cast<char*>(tosign), result.prettyPrint().c_str(), 72); 
   MsgTC msg(result.getView(), result.getSigns(), Signs(Sign(this->myid, tosign)));
   Peers recipients = remove_from_peers(this->myid); //log TC message to our own
   this->log.storeTC(result.getView(), Sign(this->myid, tosign));
@@ -2685,7 +2685,7 @@ void Handler::respondToTC(MsgTC msg) {
     if (amEpochLeaderOf(msg.view, msg.endsign.get(0).getSigner()) && msg.endsign.get(0).getSigner() != this->myid && msg.endsign.getSize()==1) { //sender is a leader within that epoch
       TC tc = TC(msg.view, msg.signs);
       unsigned char tosign [72];
-      std::strcpy(reinterpret_cast<char*>(tosign), tc.prettyPrint().c_str()); 
+      std::strncpy(reinterpret_cast<char*>(tosign), tc.prettyPrint().c_str(), 72); 
       // if (DEBUG1) std::cout << KBLU << nfo() << "respond ing to " << msg.endsign.get(0).getSigner() << KNRM << std::endl;
       Peers recipients = keep_from_peers(msg.endsign.get(0).getSigner());
       Sign votes [2];
