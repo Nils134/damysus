@@ -41,7 +41,7 @@ std::string Handler::nfo() { return "[" + std::to_string(this->myid) + "]"; }
 
 
 
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
 // These versions use trusted components
 #else
 // Trusted Component (would have to be executed in a TEE):
@@ -472,7 +472,7 @@ void setCBlock(CBlock block, cblock_t *b) {
 
 // ------------------------------------
 // SGX related stuff
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
 
@@ -612,7 +612,7 @@ const uint8_t MsgPrepareCh::opcode;
 const uint8_t MsgNewViewChComb::opcode;
 const uint8_t MsgLdrPrepareChComb::opcode;
 const uint8_t MsgPrepareChComb::opcode;
-#elif defined(ROLLBACK_FAULTY_PROTECTED)
+#elif defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
 const uint8_t MsgNewViewRBF::opcode;
 const uint8_t MsgLdrPrepareRBF::opcode;
 const uint8_t MsgPrepareRBF::opcode;
@@ -647,7 +647,7 @@ pnet(pec,pconf), cnet(cec,cconf) {
 
 
   // Trusted Functions
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   if (DEBUG0) { std::cout << KBLU << nfo() << "initializing TEE" << KNRM << std::endl; }
   initializeSGX();
   if (DEBUG0) { std::cout << KBLU << nfo() << "initialized TEE" << KNRM << std::endl; }
@@ -778,7 +778,7 @@ pnet(pec,pconf), cnet(cec,cconf) {
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_newview_ch_comb,    this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_prepare_ch_comb,    this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_ldrprepare_ch_comb, this, _1, _2));
-#elif defined(ROLLBACK_FAULTY_PROTECTED)
+#elif defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_newviewrbf,    this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_ldrpreparerbf, this, _1, _2));
   this->pnet.reg_handler(salticidae::generic_bind(&Handler::handle_preparerbf,    this, _1, _2));
@@ -1238,7 +1238,7 @@ void Handler::sendMsgLdrPrepareChComb(MsgLdrPrepareChComb msg, Peers recipients)
 
 Just Handler::callTEEsign() {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   just_t jout;
   sgx_status_t ret;
   sgx_status_t status = TEEsign(global_eid, &ret, &jout);
@@ -1256,7 +1256,7 @@ Just Handler::callTEEsign() {
 
 Just Handler::callTEEprepare(Hash h, Just j) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   just_t jout;
   just_t jin;
   setJust(j,&jin);
@@ -1278,7 +1278,7 @@ Just Handler::callTEEprepare(Hash h, Just j) {
 
 Just Handler::callTEEstore(Just j) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   just_t jout;
   just_t jin;
   setJust(j,&jin);
@@ -1318,7 +1318,7 @@ Just Handler::callTEEstore(Just j) {
 
 Accum Handler::callTEEaccum(Vote<Void,Cert> votes[MAX_NUM_SIGNATURES]) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   accum_t aout;
   votes_t vin;
   setVotes(votes,&vin);
@@ -1342,7 +1342,7 @@ Accum Handler::callTEEaccum(Vote<Void,Cert> votes[MAX_NUM_SIGNATURES]) {
 // a simpler version of callTEEaccum for when all votes are for the same payload
 Accum Handler::callTEEaccumSp(uvote_t vote) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   accum_t aout;
   sgx_status_t ret;
   sgx_status_t status = TEEaccumSp(global_eid, &ret, &vote, &aout);
@@ -1360,7 +1360,7 @@ Accum Handler::callTEEaccumSp(uvote_t vote) {
 
 Accum Handler::callTEEaccumComb(Just justs[MAX_NUM_SIGNATURES]) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   accum_t aout;
   onejusts_t jin;
   setOneJusts(justs,&jin);
@@ -1380,7 +1380,7 @@ Accum Handler::callTEEaccumComb(Just justs[MAX_NUM_SIGNATURES]) {
 // a simpler version of callTEEaccum for when all votes are for the same payload
 Accum Handler::callTEEaccumCombSp(just_t just) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   accum_t aout;
   sgx_status_t ret;
   sgx_status_t status = COMB_TEEaccumSp(global_eid, &ret, &just, &aout);
@@ -1397,7 +1397,7 @@ Accum Handler::callTEEaccumCombSp(just_t just) {
 
 Just Handler::callTEEsignComb() {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   just_t jout;
   sgx_status_t ret;
   sgx_status_t status = COMB_TEEsign(global_eid, &ret, &jout);
@@ -1414,7 +1414,7 @@ Just Handler::callTEEsignComb() {
 
 Just Handler::callTEEprepareComb(Hash h, Accum acc) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   just_t jout;
   accum_t ain;
   setAccum(acc,&ain);
@@ -1435,7 +1435,7 @@ Just Handler::callTEEprepareComb(Hash h, Accum acc) {
 
 Just Handler::callTEEstoreComb(Just j) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   just_t jout;
   just_t jin;
   setJust(j,&jin);
@@ -1456,7 +1456,7 @@ Just Handler::callTEEstoreComb(Just j) {
 bool Handler::callTEEverifyFree(Auths auths, std::string s) {
   auto start = std::chrono::steady_clock::now();
   bool b = false;
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   payload_t pin;
   setPayload(s,&pin);
   auths_t ain;
@@ -1479,7 +1479,7 @@ bool Handler::callTEEverifyFree(Auths auths, std::string s) {
 bool Handler::callTEEverifyFree2(Auths auths1, std::string s1, Auths auths2, std::string s2) {
   auto start = std::chrono::steady_clock::now();
   bool b = false;
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   payload_t pin1;
   setPayload(s1,&pin1);
   auths_t ain1;
@@ -1506,7 +1506,7 @@ bool Handler::callTEEverifyFree2(Auths auths1, std::string s1, Auths auths2, std
 Auth Handler::callTEEauthFree(std::string s) {
   auto start = std::chrono::steady_clock::now();
   Auth a;
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   payload_t pin;
   setPayload(s,&pin);
   auth_t aout;
@@ -1569,7 +1569,7 @@ HJust Handler::callTEEprepareFree(Hash h) {
 
 FVJust Handler::callTEEstoreFree(PJust j) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   fvjust_t jout;
   pjust_t jin;
   setPJust(j,&jin);
@@ -1590,7 +1590,7 @@ FVJust Handler::callTEEstoreFree(PJust j) {
 
 HAccum Handler::callTEEaccumFree(FJust high, FJust justs[MAX_NUM_SIGNATURES-1], Hash hash) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   haccum_t aout;
   fjust_t jin;
   fjusts_t jsin;
@@ -1616,7 +1616,7 @@ HAccum Handler::callTEEaccumFree(FJust high, FJust justs[MAX_NUM_SIGNATURES-1], 
 // a simpler version of callTEEaccum for when all votes are for the same payload
 HAccum Handler::callTEEaccumFreeSp(ofjust_t just, Hash hash) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   haccum_t aout;
   hash_t hin;
   setHash(hash,&hin);
@@ -1780,7 +1780,7 @@ OPvote Handler::callTEEvoteOP(Hash h) {
 
 Just Handler::callTEEsignCh() {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   just_t jout;
   sgx_status_t ret;
   sgx_status_t status = CH_TEEsign(global_eid, &ret, &jout);
@@ -1798,7 +1798,7 @@ Just Handler::callTEEsignCh() {
 
 Just Handler::callTEEprepareCh(JBlock block, JBlock block0, JBlock block1) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   just_t jout;
   // 1st block
   jblock_t jin;
@@ -1826,7 +1826,7 @@ Just Handler::callTEEprepareCh(JBlock block, JBlock block0, JBlock block1) {
 
 Just Handler::callTEEsignChComb() {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   just_t jout;
   sgx_status_t ret;
   sgx_status_t status = CH_COMB_TEEsign(global_eid, &ret, &jout);
@@ -1844,7 +1844,7 @@ Just Handler::callTEEsignChComb() {
 
 Just Handler::callTEEprepareChComb(CBlock block, Hash hash) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   just_t jout;
   // 1st block
   cblock_t cin;
@@ -1871,7 +1871,7 @@ Just Handler::callTEEprepareChComb(CBlock block, Hash hash) {
 
 Accum Handler::callTEEaccumChComb(Just justs[MAX_NUM_SIGNATURES]) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   accum_t aout;
   onejusts_t jin;
   setOneJusts(justs,&jin);
@@ -1892,7 +1892,7 @@ Accum Handler::callTEEaccumChComb(Just justs[MAX_NUM_SIGNATURES]) {
 // a simpler version of callTEEaccumChComb for when all votes are for the same payload
 Accum Handler::callTEEaccumChCombSp(just_t just) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   accum_t aout;
   sgx_status_t ret;
   sgx_status_t status = CH_COMB_TEEaccumSp(global_eid, &ret, &just, &aout);
@@ -1951,7 +1951,7 @@ void Handler::getStarted() {
   // We start the timer
   //setTimer();
 
-#if defined(BASIC_CHEAP_AND_QUICK) 
+#if defined(BASIC_CHEAP_AND_QUICK) || defined(ROTE_PROTECTED)
   Just j = callTEEsignComb();
   if (j.getSigns().getSize() == 1) {
     MsgNewViewComb msg(j.getRData(),j.getSigns().get(0));
@@ -3828,7 +3828,7 @@ Accum Handler::newviews2accRBF(std::set<MsgNewViewRBF> newviews){
 
 Accum Handler::callTEEaccumRBF(Just justs[MAX_NUM_SIGNATURES]){
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   accum_t aout;
   onejusts_t jin;
   setOneJusts(justs,&jin);
@@ -3847,7 +3847,7 @@ Accum Handler::callTEEaccumRBF(Just justs[MAX_NUM_SIGNATURES]){
 
 Accum Handler::callTEEaccumRBFSp(just_t just){
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   accum_t aout;
   sgx_status_t ret;
   sgx_status_t status = RBF_TEEaccumSp(global_eid, &ret, &just, &aout);
@@ -3865,7 +3865,7 @@ Accum Handler::callTEEaccumRBFSp(just_t just){
 Just Handler::callTEEsignRBF(){
   if (DEBUG1) std::cout << KMAG << nfo() << " call TEE sign" << this->view  << KNRM << std::endl;
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   just_t jout;
   sgx_status_t ret;
   sgx_status_t status = RBF_TEEsign(global_eid, &ret, &jout);
@@ -3882,7 +3882,7 @@ Just Handler::callTEEsignRBF(){
 
 Just Handler::callTEEprepareRBF(Hash h, Accum acc){
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   just_t jout;
   accum_t ain;
   setAccum(acc,&ain);
@@ -3903,7 +3903,7 @@ Just Handler::callTEEprepareRBF(Hash h, Accum acc){
 
 Just Handler::callTEEstoreRBF(Just j){
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   just_t jout;
   just_t jin;
   setJust(j,&jin);
@@ -3922,7 +3922,7 @@ Just Handler::callTEEstoreRBF(Just j){
 
 void Handler::callTEEattemptrollbackRBF(Just j){
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   just_t jin;
   setJust(j,&jin);
   sgx_status_t ret;
@@ -3938,7 +3938,7 @@ void Handler::callTEEattemptrollbackRBF(Just j){
 
 Wish Handler::callTEEWishRBF(){
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   wish_t wout;
   sgx_status_t ret;
   sgx_status_t status = RBF_TEEwish(global_eid, &ret, &wout);
@@ -3955,7 +3955,7 @@ Wish Handler::callTEEWishRBF(){
 
 Recovery Handler::callTEErecoveryRBF(){
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   recovery_t rout;
   sgx_status_t ret;
   sgx_status_t status = RBF_TEErecovery(global_eid, &ret, &rout);
@@ -3972,7 +3972,7 @@ Recovery Handler::callTEErecoveryRBF(){
 
 TC Handler::callTEEreceiveTCRBF(TC justTC){//TODO: change 
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   tc_t tcin;
   tc_t tcout;
   setTC(justTC,&tcin);
@@ -3991,7 +3991,7 @@ TC Handler::callTEEreceiveTCRBF(TC justTC){//TODO: change
 
 int Handler::callTEEreceiveQCRBF(QC justQC){//TODO: change
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   qc_t qcin;
   int inc = 100000;
   setQC(justQC,&qcin);
@@ -4009,7 +4009,7 @@ int Handler::callTEEreceiveQCRBF(QC justQC){//TODO: change
 
 TC Handler::callTEEleaderWishRBF(Wish wish) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   tc_t tcout;
   wish_t w;
   setWish(wish,&w);
@@ -4028,7 +4028,7 @@ TC Handler::callTEEleaderWishRBF(Wish wish) {
 
 QC Handler::callTEEleaderQuorumRBF(TC tc) {
   auto start = std::chrono::steady_clock::now();
-#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED)
+#if defined(BASIC_CHEAP) || defined(BASIC_QUICK) || defined(BASIC_CHEAP_AND_QUICK) || defined(BASIC_FREE) || defined(BASIC_ONEP) || defined(CHAINED_CHEAP_AND_QUICK) || defined(ROLLBACK_FAULTY_PROTECTED) || defined(ROTE_PROTECTED)
   qc_t qcout;
   tc_t tcin;
   setTC(tc, &tcin);
